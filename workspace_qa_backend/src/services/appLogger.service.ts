@@ -1,0 +1,50 @@
+import { join } from 'path';
+import { createLogger, transports, format } from 'winston';
+
+const { combine, timestamp, printf, uncolorize, colorize } = format;
+
+const logDirectory = join(__dirname, '../../log');
+
+// app loger config
+export const appLogger = createLogger({
+    format: combine(
+        timestamp(),
+        printf((msg) =>
+            colorize({
+                colors: {
+                    error: 'bold red',
+                    debug: 'blue',
+                },
+            }).colorize(
+                msg.level,
+                `${msg.timestamp} - [${msg.level.toUpperCase()}]: ${msg.message}`
+            )
+        )
+    ),
+    transports: [
+        new transports.File({
+            level: 'info',
+            filename: 'info.log',
+            dirname: logDirectory,
+            handleExceptions: true,
+            format: combine(uncolorize()),
+            maxsize: 5242880,
+            maxFiles: 25,
+        }),
+        new transports.Console({
+            level: 'error',
+            handleExceptions: true,
+        }),
+        new transports.Console({
+            level: 'debug',
+            handleExceptions: true,
+        }),
+    ],
+    exitOnError: false,
+});
+
+export class LogStream {
+    write(text: string) {
+        appLogger.info(text);
+    }
+}
