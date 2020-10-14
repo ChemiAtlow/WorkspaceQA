@@ -1,6 +1,6 @@
 import { Request } from 'express';
 import { HttpException, UserNotFoundException } from '../exceptions';
-import { IConroller } from './controller.model';
+import { IConroller } from '.';
 
 const users = [
     { name: 'Ron', age: 12, id: '32505CEA92D446B4B72B83DD77C60974' },

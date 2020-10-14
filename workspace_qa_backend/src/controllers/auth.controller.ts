@@ -2,7 +2,7 @@ import { HTTPStatuses } from '../constants';
 import { HttpException } from '../exceptions';
 import { userModel } from '../models/mongo';
 import { appLogger, createUserFromRequest, isValidUser } from '../services';
-import { IConroller } from './controller.model';
+import { IConroller } from '.';
 
 export const authController: IConroller = {
     register: {
