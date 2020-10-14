@@ -5,15 +5,17 @@ import { json, urlencoded } from 'body-parser';
 import { initialize } from 'passport';
 import cors from 'cors';
 
-import { Controller } from './controllers/controller.model';
-import { errorMiddleware } from './middleware/error.middleware';
-import { appLogger, LogStream } from './services';
+import { Controller } from './controllers';
+import { errorMiddleware } from './middleware';
+import { appLogger, LogStream, mongoDBConnect } from './services';
 
 export class App {
     public readonly app: Application;
 
     constructor(controllers: Controller[], public readonly port: number) {
         this.app = express();
+
+        this.connectToDatabase();
 
         this.initializeMiddlewares();
         this.initializeControllers(controllers);
@@ -23,7 +25,7 @@ export class App {
     private initializeMiddlewares() {
         this.app.use(cookieParser());
         this.app.use('*', cors());
-        this.app.use(morgan('dev', { stream: new LogStream()}));
+        this.app.use(morgan('dev', { stream: new LogStream() }));
         this.app.use(urlencoded({ extended: false }));
         this.app.use(json());
         this.app.use(initialize());
@@ -37,6 +39,11 @@ export class App {
         controllers.forEach((controller) => {
             this.app.use(controller.path, controller.router);
         });
+    }
+
+    private async connectToDatabase() {
+        appLogger.info('Starting connection to mongo');
+        await mongoDBConnect();
     }
 
     public listen() {
