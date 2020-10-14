@@ -1,6 +1,6 @@
-import { Request, Response, Router } from 'express';
+import { Request } from 'express';
 import { HttpException, UserNotFoundException } from '../exceptions';
-import { Controller } from './controller.model';
+import { IConroller } from './controller.model';
 
 const users = [
     { name: 'Ron', age: 12, id: '32505CEA92D446B4B72B83DD77C60974' },
@@ -11,31 +11,28 @@ const users = [
     { name: 'Mor', age: 48, id: 'BA536B108ABC4628B192C341DD41310C' },
 ];
 
-export class UsersController extends Controller {
-    public path: string = '/users';
-    protected intializeRoutes(): void {
-        this.router.get('/', this.getAll);
-        this.router.get('/:userId', this.getSpecific);
-    }
-    constructor() {
-        super();
-    }
-    getAll(_: Request, res: Response) {
-        res.send(users);
-    }
-
-    getSpecific(req: Request<{ userId: string }>, res: Response) {
-        let {
-            params: { userId },
-        } = req;
-        userId = userId.trim();
-        if (!userId) {
-            throw new HttpException(400, 'No user ID provided');
-        }
-        const user = users.filter((user) => user.id === userId);
-        if (user.length < 1) {
-            throw new UserNotFoundException(userId);
-        }
-        res.send(user[0]);
-    }
-}
+export const userControllers: IConroller = {
+    getAll: {
+        path: '/',
+        method: 'get',
+        controller: (_, res) => res.send(users),
+    },
+    getSpecific: {
+        path: '/:userId',
+        method: 'get',
+        controller: (req: Request<{ userId: string }>, res) => {
+            let {
+                params: { userId },
+            } = req;
+            userId = userId.trim();
+            if (!userId) {
+                throw new HttpException(400, 'No user ID provided');
+            }
+            const user = users.filter((user) => user.id === userId);
+            if (user.length < 1) {
+                throw new UserNotFoundException(userId);
+            }
+            res.send(user[0]);
+        },
+    },
+};
