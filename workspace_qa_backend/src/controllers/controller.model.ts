@@ -1,5 +1,8 @@
-import { RequestHandler, Router } from 'express';
+import { NextFunction, Request, RequestHandler, Response, Router } from 'express';
 
+type AsyncEndpointWrapper = (
+    fn: RequestHandler<any>
+) => (req: Request, res: Response, next: NextFunction) => Promise<any>;
 export type Endpoint = {
     path: string;
     controller: RequestHandler<any>;
@@ -18,7 +21,10 @@ export class Controller {
     private intializeRoutes() {
         for (const key in this.controllers) {
             const { controller, method, path } = this.controllers[key];
-            this.router[method](path, controller);
+            const isAsync = controller.constructor.name === 'AsyncFunction';
+            const asyncWrapper: AsyncEndpointWrapper = (fn) => (req, res, next) =>
+                Promise.resolve(fn(req, res, next)).catch(next);
+            this.router[method](path, isAsync ? asyncWrapper(controller) : controller);
         }
     }
 }
