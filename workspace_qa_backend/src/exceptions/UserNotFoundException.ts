@@ -1,7 +1,8 @@
-import { HttpException } from "./HttpException";
+import { HTTPStatuses } from '../constants';
+import { HttpException } from './HttpException';
 
 export class UserNotFoundException extends HttpException {
     constructor(id: string) {
-        super(404, `user with id: ${id} not found!`);
+        super(HTTPStatuses.notFound, `user with id: ${id} not found!`);
     }
 }
