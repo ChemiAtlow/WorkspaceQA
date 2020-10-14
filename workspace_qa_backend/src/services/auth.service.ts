@@ -8,7 +8,7 @@ export const isValidJWTToken = (token: string) => {
         verify(token, process.env.JWT_SECRET_OR_KEY || '');
         return true;
     } catch (error) {
-        appLogger.warning("Invalid token", error);
+        appLogger.warning('Invalid token', error);
         return false;
     }
 };
@@ -28,11 +28,7 @@ export const isValidJWTToken = (token: string) => {
 
 export const isValidUser = (request: Request) => {
     if (request) {
-        const email = request.body.email || '';
-        const username = request.body.username || '';
-        const password = request.body.password || '';
-        const firstName = request.body.firstName || '';
-        const lastName = request.body.lastName || '';
+        const { email, username, password, firstName, lastName } = request.body;
         if (email && username && password && firstName && lastName) {
             return true;
         }
