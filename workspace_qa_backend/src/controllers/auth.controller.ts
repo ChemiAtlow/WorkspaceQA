@@ -5,10 +5,10 @@ import {
     BadRequestException,
     HttpException,
     UserExistsException,
-    UserNotFoundException,
+    WrongCredentialsException,
 } from '../exceptions';
 import { userModel } from '../models/mongo';
-import { appLogger, createUserFromRequest, isValidUser } from '../services';
+import { appLogger, createJWTToken, createUserFromRequest, isValidUser } from '../services';
 import { IConroller } from '.';
 
 export const authController: IConroller = {
@@ -16,38 +16,42 @@ export const authController: IConroller = {
         path: '/resgister',
         method: 'post',
         controller: async (req, res) => {
-            // insert only if we have required data
-            if (isValidUser(req)) {
-                // we can find by username or email because they are unique
-                const { email, username } = req.body;
-                try {
-                    const userByEmail = await userModel.findOne({ email });
-                    if (userByEmail) {
-                        throw new UserExistsException('email');
-                    }
-                    const userByName = await userModel.findOne({ username });
-                    if (userByName) {
-                        throw new UserExistsException('username');
-                    }
-                    const newUser = createUserFromRequest(req);
-                    await newUser?.save();
-                    res.send({
-                        success: true,
-                        user: userModel,
-                    });
-                } catch (error) {
-                    if (error instanceof HttpException) {
-                        throw error;
-                    }
-                    appLogger.error('could not register', error);
-                    throw new HttpException(
-                        HTTPStatuses.internalServerError,
-                        'Could not register user!'
-                    );
-                }
-            } else {
+            // Register only if we have required data
+            if (!isValidUser(req)) {
                 appLogger.error('Did not get data for register!');
                 throw new BadRequestException('Some user data is lacking!');
+            }
+            // we can find by username or email because they are unique
+            const { email, username } = req.body;
+            try {
+                if (await userModel.findOne({ email })) {
+                    throw new UserExistsException('email');
+                }
+                if (await userModel.findOne({ username })) {
+                    throw new UserExistsException('username');
+                }
+                const user = await createUserFromRequest(req)?.save();
+                if (!user) {
+                    throw new HttpException(
+                        HTTPStatuses.internalServerError,
+                        'Issue creating user!'
+                    );
+                }
+                const tokenData = createJWTToken(user);
+                res.setHeader('Set-Cookie', [tokenData]);
+                res.send({
+                    success: true,
+                    user: { ...user, password: '' },
+                });
+            } catch (error) {
+                if (error instanceof HttpException) {
+                    throw error;
+                }
+                appLogger.error('could not register', error);
+                throw new HttpException(
+                    HTTPStatuses.internalServerError,
+                    'Could not register user!'
+                );
             }
         },
     },
@@ -62,22 +66,18 @@ export const authController: IConroller = {
             try {
                 const user = await userModel.findOne({ email });
                 if (!user) {
-                    throw new UserNotFoundException(email);
+                    throw new WrongCredentialsException();
                 }
-                const isMatch = await user.comparePassword(password);
-                if (!isMatch) {
-                    throw new HttpException(
-                        HTTPStatuses.unauthorized,
-                        'This is the wrong password!'
-                    );
+                const isPasswordMatching = await user.comparePassword(password);
+                if (!isPasswordMatching) {
+                    throw new WrongCredentialsException();
                 }
                 //If we are here, user exists and this is correct password
-                const { secret = '', expire = 18000000 } = process.env;
-                const token = sign(user.toJSON(), secret, { expiresIn: expire });
+                const tokenData = createJWTToken(user);
+                res.setHeader('Set-Cookie', [tokenData]);
                 res.send({
                     success: true,
-                    user: user,
-                    token: `JWT ${token}`,
+                    user: { ...user, password: undefined },
                 });
             } catch (error) {
                 if (error instanceof HttpException) {
