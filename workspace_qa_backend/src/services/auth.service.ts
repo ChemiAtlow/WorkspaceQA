@@ -1,30 +1,5 @@
 import { Request } from 'express';
-import { verify } from 'jsonwebtoken';
 import { userModel } from '../models/mongo';
-import { appLogger } from './appLogger.service';
-
-export const isValidJWTToken = (token: string) => {
-    try {
-        verify(token, process.env.JWT_SECRET_OR_KEY || '');
-        return true;
-    } catch (error) {
-        appLogger.warning('Invalid token', error);
-        return false;
-    }
-};
-
-// const retrieveToken = (headers:any) => {
-//     if (headers && headers.authorization) {
-//         const tokens = headers.authorization.split(' ');
-//         if (tokens && tokens.length === 2) {
-//             return tokens[1];
-//         } else {
-//             return null;
-//         }
-//     } else {
-//         return null;
-//     }
-// };
 
 export const isValidUser = (request: Request) => {
     if (request) {
@@ -36,9 +11,5 @@ export const isValidUser = (request: Request) => {
     return false;
 };
 
-export const createUserFromRequest = (request: Request) => {
-    if (isValidUser(request)) {
-        return new userModel(request.body);
-    }
-    return null;
-};
+export const createUserFromRequest = (request: Request) =>
+    isValidUser(request) ? new userModel(request.body) : null;
