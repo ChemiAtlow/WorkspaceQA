@@ -1,9 +1,9 @@
 import { IncomingHttpHeaders } from 'http';
 import { sign, verify } from 'jsonwebtoken';
-import { IDataInJwtToken, IJwtTokenData, IUser } from '../models/interfaces';
+import { IDataInJwtToken, IJwtTokenData, IUserDocumnet } from '../models/interfaces';
 import { appLogger } from './appLogger.service';
 
-export const createJWTToken = (user: IUser) => {
+export const createJWTToken = (user: IUserDocumnet) => {
     const secret = process.env.JWT_SECRET_OR_KEY ?? '';
     const expiresIn = process.env.JWT_TOKEN_EXPIRATION
         ? parseInt(process.env.JWT_TOKEN_EXPIRATION)

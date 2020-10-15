@@ -1,13 +1,15 @@
-import { Document } from 'mongoose';
+import { Document, Model } from 'mongoose';
 
-export interface IUser extends Document {
-    firstName: string;
-    lastName: string;
-    password: string;
-    email: string;
+export interface IUser {
+    githubId: string;
     username: string;
-    birthday?: string;
-    job?: string;
+    profileUrl: string;
+    avatar: string;
+    email?: string;
+}
 
-    comparePassword(password: string): Promise<boolean>;
+export interface IUserDocumnet extends Document, IUser {}
+
+export interface IUserModel extends Model<IUserDocumnet> {
+    findOrCreate(profile: IUser): Promise<IUserDocumnet>;
 }
