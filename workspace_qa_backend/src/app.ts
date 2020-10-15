@@ -1,9 +1,9 @@
-import express, { Application } from 'express';
+import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
+import express, { Application } from 'express';
 import { json, urlencoded } from 'body-parser';
 import { initialize } from 'passport';
-import cors from 'cors';
 
 import { Controller } from './controllers';
 import { errorMiddleware } from './middleware';
