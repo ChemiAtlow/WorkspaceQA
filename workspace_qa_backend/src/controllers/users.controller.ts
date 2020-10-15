@@ -21,9 +21,7 @@ export const userControllers: IConroller = {
         path: '/:userId',
         method: 'get',
         controller: (req: Request<{ userId: string }>, res) => {
-            let {
-                params: { userId },
-            } = req;
+            let { userId } = req.params;
             userId = userId.trim();
             if (!userId) {
                 throw new HttpException(400, 'No user ID provided');
