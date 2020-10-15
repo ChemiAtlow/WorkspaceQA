@@ -1,12 +1,15 @@
 import { NextFunction, Request, RequestHandler, Response, Router } from 'express';
+// import { authenticate } from 'passport';
 
 type AsyncEndpointWrapper = (
     fn: RequestHandler<any>
 ) => (req: Request, res: Response, next: NextFunction) => Promise<any>;
+
 export type Endpoint = {
     path: string;
-    controller: RequestHandler<any>;
     method: 'all' | 'get' | 'post' | 'put' | 'delete' | 'patch' | 'options' | 'head' | 'use';
+    authSafe?: boolean;
+    controller: RequestHandler<any>;
 };
 
 export interface IConroller {
@@ -20,11 +23,16 @@ export class Controller {
     }
     private intializeRoutes() {
         for (const key in this.controllers) {
-            const { controller, method, path } = this.controllers[key];
+            const { controller, method, path, authSafe } = this.controllers[key];
+            const handlers: RequestHandler[] = [];
+            if (authSafe) {
+                //handlers.push(authenticate('github', { session: false }));
+            }
             const isAsync = controller.constructor.name === 'AsyncFunction';
-            const asyncWrapper: AsyncEndpointWrapper = (fn) => (req, res, next) =>
-                Promise.resolve(fn(req, res, next)).catch(next);
-            this.router[method](path, isAsync ? asyncWrapper(controller) : controller);
+            handlers.push(isAsync ? this.asyncWrapper(controller) : controller);
+            this.router[method](path, handlers);
         }
     }
+    private asyncWrapper: AsyncEndpointWrapper = (fn) => (req, res, next) =>
+        Promise.resolve(fn(req, res, next)).catch(next);
 }
