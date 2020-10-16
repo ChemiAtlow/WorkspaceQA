@@ -1,5 +1,3 @@
-import { sign } from 'jsonwebtoken';
-
 import { HTTPStatuses } from '../constants';
 import {
     BadRequestException,
@@ -8,7 +6,13 @@ import {
     WrongCredentialsException,
 } from '../exceptions';
 import { userModel } from '../models/mongo';
-import { appLogger, createJWTToken, createUserFromRequest, isValidUser } from '../services';
+import {
+    appLogger,
+    createJWTToken,
+    createUserFromRequest,
+    isValidUser,
+    getUserDataFromCallback,
+} from '../services';
 import { IConroller } from '.';
 
 export const authController: IConroller = {
@@ -68,10 +72,6 @@ export const authController: IConroller = {
                 if (!user) {
                     throw new WrongCredentialsException();
                 }
-                const isPasswordMatching = await user.comparePassword(password);
-                if (!isPasswordMatching) {
-                    throw new WrongCredentialsException();
-                }
                 //If we are here, user exists and this is correct password
                 const tokenData = createJWTToken(user);
                 res.setHeader('Set-Cookie', [tokenData]);
@@ -86,6 +86,17 @@ export const authController: IConroller = {
                 appLogger.error('could not login', error);
                 throw new HttpException(HTTPStatuses.internalServerError, 'Could not login user!');
             }
+        },
+    },
+    githubOauth: {
+        path: '/git',
+        method: 'post',
+        controller: async (req, res) => {
+            const { code } = req.body;
+            const userData = await getUserDataFromCallback(code);
+            const { avatar_url: avatarUrl, email, id, login, name, node_id: nodeId } = userData;
+            console.log({ avatarUrl, id, login, email, name, nodeId });
+            res.send('HI');
         },
     },
 };
