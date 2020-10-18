@@ -24,7 +24,7 @@ export class App {
 
     private initializeMiddlewares() {
         this.app.use(cookieParser());
-        this.app.use('*', cors());
+        this.app.use(cors());
         this.app.use(morgan('dev', { stream: new LogStream() }));
         this.app.use(urlencoded({ extended: false }));
         this.app.use(json());

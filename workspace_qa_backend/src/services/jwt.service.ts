@@ -1,6 +1,7 @@
 import { IncomingHttpHeaders } from 'http';
 import { sign, verify } from 'jsonwebtoken';
-import { IDataInJwtToken, IJwtTokenData, IUserDocumnet } from '../models/interfaces';
+import { IUserDocumnet } from '../models/DB/interfaces';
+import { IDataInJwtToken, IJwtTokenData } from '../models/interfaces';
 import { appLogger } from './appLogger.service';
 
 export const createJWTToken = (user: IUserDocumnet) => {
@@ -42,4 +43,4 @@ export const retrieveJWTToken = (headers: IncomingHttpHeaders) => {
 };
 
 const createCookieData = (tokenData: IJwtTokenData) =>
-    `Authorization=${tokenData.token}; HttpOnly; Max-Age=${tokenData.expiresIn}`;
+    `Authorization=jwt ${tokenData.token}; Max-Age=${tokenData.expiresIn}`;

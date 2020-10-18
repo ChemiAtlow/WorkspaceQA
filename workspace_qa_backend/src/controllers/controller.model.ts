@@ -1,5 +1,5 @@
 import { NextFunction, Request, RequestHandler, Response, Router } from 'express';
-// import { authenticate } from 'passport';
+import { authenticate } from 'passport';
 
 type AsyncEndpointWrapper = (
     fn: RequestHandler<any>
@@ -26,7 +26,7 @@ export class Controller {
             const { controller, method, path, authSafe } = this.controllers[key];
             const handlers: RequestHandler[] = [];
             if (authSafe) {
-                //handlers.push(authenticate('github', { session: false }));
+                handlers.push(authenticate('jwt', { session: false }));
             }
             const isAsync = controller.constructor.name === 'AsyncFunction';
             handlers.push(isAsync ? this.asyncWrapper(controller) : controller);

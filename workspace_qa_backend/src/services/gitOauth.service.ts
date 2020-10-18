@@ -76,5 +76,5 @@ export const getUserDataFromCallback = async (code: string) => {
         const primaryEmail = emails.find((email) => email.primary);
         userData.email = primaryEmail?.email || '';
     }
-    return userData;
+    return { ...userData, accessToken: accessTokenResult.accessToken };
 };

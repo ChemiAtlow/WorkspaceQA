@@ -1,11 +1,12 @@
 import { Document, Model } from 'mongoose';
 
 export interface IUser {
-    githubId: string;
+    githubId: number;
     username: string;
     avatar: string;
     email: string;
     name: string;
+    accessToken: string;
 }
 
 export interface IUserDocumnet extends Document, IUser {}

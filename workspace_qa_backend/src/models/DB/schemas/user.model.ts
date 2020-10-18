@@ -13,12 +13,11 @@ const userSchema = new Schema<IUserDocumnet>({
     },
     email: {
         type: String,
-        required: false,
         unique: true,
         trim: true,
     },
     githubId: {
-        type: String,
+        type: Number,
         required: true,
         unique: true,
     },
@@ -32,6 +31,10 @@ const userSchema = new Schema<IUserDocumnet>({
         required: true,
         trim: true,
     },
+    accessToken: {
+        type: String,
+        required: true,
+    },
 });
 
 // post saving user
@@ -41,8 +44,13 @@ userSchema.post<IUserDocumnet>('save', function (user, next) {
 });
 
 userSchema.statics.findOrCreate = async function (profile: IUser) {
-    const user = await userModel.findOne({ ...profile });
+    const { githubId, username, accessToken } = profile;
+    const user = await userModel.findOne({ githubId, username });
     if (user) {
+        if (user.accessToken !== accessToken) {
+            user.accessToken = accessToken;
+            return await user.save();
+        }
         return user;
     }
     return await userModel.create(profile);
