@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import { userModel } from '../models/mongo';
+import { userModel } from '../models/DB/schemas';
 
 export const isValidUser = (request: Request) => {
     if (request) {

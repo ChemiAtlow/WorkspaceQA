@@ -5,7 +5,7 @@ import {
     UserExistsException,
     WrongCredentialsException,
 } from '../exceptions';
-import { userModel } from '../models/mongo';
+import { userModel } from '../models/DB/schemas';
 import {
     appLogger,
     createJWTToken,
@@ -94,8 +94,8 @@ export const authController: IConroller = {
         controller: async (req, res) => {
             const { code } = req.body;
             const userData = await getUserDataFromCallback(code);
-            const { avatar_url: avatarUrl, email, id, login, name, node_id: nodeId } = userData;
-            console.log({ avatarUrl, id, login, email, name, nodeId });
+            const { avatar_url: avatarUrl, email, id, login, name } = userData;
+            console.log({ avatarUrl, id, login, email, name });
             res.send('HI');
         },
     },

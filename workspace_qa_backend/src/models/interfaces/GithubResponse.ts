@@ -16,11 +16,11 @@ export type GithubAccessTokenData = {
 export type GithubAccessTokenResponse = {
     login: string;
     id: number;
-    node_id: string;
     avatar_url: string;
     name: string;
     email: string;
 };
+
 export type GithubEmailResponse = {
     email: string;
     primary: boolean;
