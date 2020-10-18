@@ -1,18 +1,5 @@
-import { HTTPStatuses } from '../constants';
-import {
-    BadRequestException,
-    HttpException,
-    UserExistsException,
-    WrongCredentialsException,
-} from '../exceptions';
 import { userModel } from '../models/DB/schemas';
-import {
-    appLogger,
-    createJWTToken,
-    createUserFromRequest,
-    isValidUser,
-    getUserDataFromCallback,
-} from '../services';
+import { createJWTToken, getUserDataFromCallback } from '../services';
 import { IConroller } from '.';
 
 export const authController: IConroller = {
@@ -37,6 +24,7 @@ export const authController: IConroller = {
                 githubId,
                 name,
                 username,
+                projects: [],
             });
             const token = createJWTToken(newUser);
             res.send(token);
