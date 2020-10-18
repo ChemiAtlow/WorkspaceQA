@@ -2,7 +2,7 @@ import { Schema, model } from 'mongoose';
 import passportLocalMongoose from 'passport-local-mongoose';
 
 import { IUserModel, IUserDocumnet, IUser } from '../interfaces';
-import { appLogger } from '../../services';
+import { appLogger } from '../../../services';
 
 const userSchema = new Schema<IUserDocumnet>({
     username: {
@@ -20,10 +20,12 @@ const userSchema = new Schema<IUserDocumnet>({
     githubId: {
         type: String,
         required: true,
+        unique: true,
     },
-    profileUrl: {
+    name: {
         type: String,
         required: true,
+        trim: true,
     },
     avatar: {
         type: String,

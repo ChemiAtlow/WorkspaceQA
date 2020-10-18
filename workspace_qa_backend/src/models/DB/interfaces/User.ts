@@ -3,9 +3,9 @@ import { Document, Model } from 'mongoose';
 export interface IUser {
     githubId: string;
     username: string;
-    profileUrl: string;
     avatar: string;
-    email?: string;
+    email: string;
+    name: string;
 }
 
 export interface IUserDocumnet extends Document, IUser {}
