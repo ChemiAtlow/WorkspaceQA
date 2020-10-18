@@ -2,7 +2,7 @@ import { IUserDocumnet } from './User';
 
 export interface IResponse {
     message: string;
-    edited: string;
+    edited: boolean;
     versions: string[];
     user: {
         id: IUserDocumnet['_id'];
