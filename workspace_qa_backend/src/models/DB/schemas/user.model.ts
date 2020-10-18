@@ -35,6 +35,12 @@ const userSchema = new Schema<IUserDocumnet>({
         type: String,
         required: true,
     },
+    projects: [
+        {
+            ref: 'Projects',
+            type: Schema.Types.ObjectId,
+        },
+    ],
 });
 
 // post saving user
@@ -59,4 +65,4 @@ userSchema.statics.findOrCreate = async function (profile: IUser) {
 // pass passport-local-mongoose plugin in order to handle password hashing
 userSchema.plugin(passportLocalMongoose);
 
-export const userModel = model<IUserDocumnet, IUserModel>('User', userSchema);
+export const userModel = model<IUserDocumnet, IUserModel>('Users', userSchema);

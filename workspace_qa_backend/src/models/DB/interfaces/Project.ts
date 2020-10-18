@@ -1,5 +1,5 @@
 import { Document, Model } from 'mongoose';
-import { IUserDocumnet } from './User';
+import { IQuestionDocumnet, IUserDocumnet } from '.';
 
 export interface IProject {
     name: string;
@@ -9,7 +9,7 @@ export interface IProject {
         avatar: IUserDocumnet['avatar'];
         role: 'Owner' | 'Admin' | 'User';
     }>;
-    questions: any;
+    questions: IQuestionDocumnet['_id'][];
 }
 
 //Methods - if needed.

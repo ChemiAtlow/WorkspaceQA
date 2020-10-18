@@ -1,4 +1,5 @@
 import { Document, Model } from 'mongoose';
+import { IProjectDocumnet } from './Project';
 
 export interface IUser {
     githubId: number;
@@ -7,6 +8,7 @@ export interface IUser {
     email: string;
     name: string;
     accessToken: string;
+    projects: IProjectDocumnet['_id'][];
 }
 
 export interface IUserDocumnet extends Document, IUser {}
