@@ -1,5 +1,4 @@
 import { Schema, model } from 'mongoose';
-import passportLocalMongoose from 'passport-local-mongoose';
 
 import { IUserModel, IUserDocumnet, IUser } from '../interfaces';
 import { appLogger } from '../../../services';
@@ -61,8 +60,5 @@ userSchema.statics.findOrCreate = async function (profile: IUser) {
     }
     return await userModel.create(profile);
 };
-
-// pass passport-local-mongoose plugin in order to handle password hashing
-userSchema.plugin(passportLocalMongoose);
 
 export const userModel = model<IUserDocumnet, IUserModel>('Users', userSchema);
