@@ -1,5 +1,4 @@
 import cors from 'cors';
-import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import express, { Application } from 'express';
 import { json, urlencoded } from 'body-parser';
@@ -23,7 +22,6 @@ export class App {
     }
 
     private initializeMiddlewares() {
-        this.app.use(cookieParser());
         this.app.use(cors());
         this.app.use(morgan('dev', { stream: new LogStream() }));
         this.app.use(urlencoded({ extended: false }));
