@@ -7,6 +7,7 @@ const logDirectory = join(__dirname, '../../log');
 
 // app loger config
 export const appLogger = createLogger({
+    silent: process.env.NODE_ENV === 'test',
     format: combine(
         timestamp(),
         printf((msg) =>
@@ -33,6 +34,10 @@ export const appLogger = createLogger({
         }),
         new transports.Console({
             level: 'error',
+            handleExceptions: true,
+        }),
+        new transports.Console({
+            level: 'warn',
             handleExceptions: true,
         }),
         new transports.Console({

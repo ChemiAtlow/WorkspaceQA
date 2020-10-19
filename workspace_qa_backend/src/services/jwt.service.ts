@@ -1,4 +1,3 @@
-import { IncomingHttpHeaders } from 'http';
 import { sign, verify } from 'jsonwebtoken';
 import { IUserDocumnet } from '../models/DB/interfaces';
 import { IDataInJwtToken, IJwtTokenData } from '../models/interfaces';
@@ -24,21 +23,8 @@ export const isValidJWTToken = (token: string) => {
         verify(token, process.env.JWT_SECRET_OR_KEY || '');
         return true;
     } catch (error) {
-        appLogger.warning('Invalid token', error);
+        appLogger.warn('Invalid token', error);
         return false;
-    }
-};
-
-export const retrieveJWTToken = (headers: IncomingHttpHeaders) => {
-    if (headers?.authorization) {
-        const tokens = headers.authorization.split(' ');
-        if (tokens?.length === 2) {
-            return tokens[1];
-        } else {
-            return null;
-        }
-    } else {
-        return null;
     }
 };
 

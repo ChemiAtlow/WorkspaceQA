@@ -42,6 +42,9 @@ const getGithubUserData = async ({ accessToken, tokenType }: GithubAccessTokenDa
         const res = await axios.get<GithubAccessTokenResponse>('https://api.github.com/user', {
             headers: { Authorization: `${tokenType} ${accessToken}` },
         });
+        if (res.status === 401) {
+            throw new Error();
+        }
         return res.data;
     } catch (err) {
         appLogger.error('error while getting user details!', err);
@@ -68,6 +71,9 @@ const getGihubPrivateEmail = async ({ accessToken, tokenType }: GithubAccessToke
 };
 
 export const getUserDataFromCallback = async (code: string) => {
+    if (!code) {
+        throw new HttpException(HTTPStatuses.clientError, 'No callback code recieved!');
+    }
     const accessTokenResult = await getGithubAccessToken(code);
     const userData = await getGithubUserData(accessTokenResult);
     // Private email fallback.
