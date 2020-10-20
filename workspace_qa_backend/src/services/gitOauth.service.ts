@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { HTTPStatuses } from '../constants';
-import { HttpException } from '../exceptions';
+import { HttpException, InternalServerException } from '../exceptions';
 import {
     GithubCodeResponse,
     GithubAccessTokenData,
@@ -22,7 +22,7 @@ const getGithubAccessToken = async (code: string) => {
             { headers: { Accept: 'application/json' } }
         );
         if (result.data.error) {
-            throw new HttpException(HTTPStatuses.internalServerError, 'Invalid code!');
+            throw new InternalServerException('Invalid code!');
         }
         const { access_token: accessToken = '', token_type: tokenType = '' } = result.data;
         return { accessToken, tokenType };
@@ -30,10 +30,7 @@ const getGithubAccessToken = async (code: string) => {
         if (error instanceof HttpException) {
             throw error;
         }
-        throw new HttpException(
-            HTTPStatuses.internalServerError,
-            'Issue retrieving the access token!'
-        );
+        throw new InternalServerException('Issue retrieving the access token!');
     }
 };
 
@@ -48,10 +45,7 @@ const getGithubUserData = async ({ accessToken, tokenType }: GithubAccessTokenDa
         return res.data;
     } catch (err) {
         appLogger.error('error while getting user details!', err);
-        throw new HttpException(
-            HTTPStatuses.internalServerError,
-            'error while getting user details!'
-        );
+        throw new InternalServerException('error while getting user details!');
     }
 };
 
@@ -63,10 +57,7 @@ const getGihubPrivateEmail = async ({ accessToken, tokenType }: GithubAccessToke
         return res.data;
     } catch (err) {
         appLogger.error('error while getting user details!', err);
-        throw new HttpException(
-            HTTPStatuses.internalServerError,
-            'error while getting user details!'
-        );
+        throw new InternalServerException('error while getting user details!');
     }
 };
 
