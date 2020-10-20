@@ -1,6 +1,7 @@
 import { userModel } from '../models/DB/schemas';
-import { createJWTToken, getUserDataFromCallback } from '../services';
+import { createJWTToken, getUserDataFromCallback, isValidJWTToken } from '../services';
 import { IConroller } from '.';
+import { BadRequestException } from '../exceptions';
 
 export const authController: IConroller = {
     githubOauth: {
@@ -28,6 +29,18 @@ export const authController: IConroller = {
             });
             const token = createJWTToken(newUser);
             res.send(token);
+        },
+    },
+    validateFrontEndCookie: {
+        path: '/cookie-validate',
+        method: 'post',
+        controller: (req, res) => {
+            const { token } = req.body;
+            if (!token) {
+                throw new BadRequestException('No token was sent!');
+            }
+            const isValid = isValidJWTToken(token);
+            res.send(isValid);
         },
     },
 };
