@@ -9,6 +9,7 @@ export type Endpoint = {
     path: string;
     method: 'all' | 'get' | 'post' | 'put' | 'delete' | 'patch' | 'options' | 'head' | 'use';
     authSafe?: boolean;
+    middleware?: RequestHandler<any>[];
     controller: RequestHandler<any>;
 };
 
@@ -23,14 +24,17 @@ export class Controller {
     }
     private intializeRoutes() {
         for (const key in this.controllers) {
-            const { controller, method, path, authSafe } = this.controllers[key];
+            const { controller, method, path, authSafe, middleware } = this.controllers[key];
             const handlers: RequestHandler[] = [];
             if (authSafe) {
                 handlers.push(authenticate('jwt', { session: false }));
             }
+            if (middleware) {
+                handlers.push(...middleware);
+            }
             const isAsync = controller.constructor.name === 'AsyncFunction';
             handlers.push(isAsync ? this.asyncWrapper(controller) : controller);
-            this.router[method](path, handlers);
+            this.router[method]?.(path, ...handlers);
         }
     }
     private asyncWrapper: AsyncEndpointWrapper = (fn) => (req, res, next) =>
