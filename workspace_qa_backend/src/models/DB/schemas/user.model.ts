@@ -44,7 +44,7 @@ const userSchema = new Schema<IUserDocumnet>({
 
 // post saving user
 userSchema.post<IUserDocumnet>('save', function (user, next) {
-    appLogger.debug(`new user saved: ${user._id} - ${user.username}`);
+    appLogger.debug(`User saved: ${user._id} - ${user.username}`);
     next();
 });
 
