@@ -6,7 +6,7 @@ import { initialize } from 'passport';
 
 import { Controller } from './controllers';
 import { errorMiddleware } from './middleware';
-import { appLogger, LogStream, mongoDBConnect } from './services';
+import { appLogger, init, LogStream, mongoDBConnect } from './services';
 
 export class App {
     public readonly app: Application;
@@ -22,7 +22,7 @@ export class App {
     }
 
     private initializeMiddlewares() {
-        this.app.use(cors());
+        this.app.use('*', cors({ credentials: true }));
         this.app.use(morgan('dev', { stream: new LogStream() }));
         this.app.use(urlencoded({ extended: false }));
         this.app.use(json());
@@ -45,8 +45,14 @@ export class App {
     }
 
     public listen() {
-        this.app.listen(this.port, () => {
+        const server = this.app.listen(this.port, () => {
             appLogger.debug(`Server started listening on the port ${this.port}`);
+        });
+        init(server).on('connection', (socket) => {
+            socket.on('subscribe', (roomData) => {
+                socket.leave(`user${roomData.from}`);
+                socket.join(`user${roomData.to}`);
+            });
         });
     }
 }
