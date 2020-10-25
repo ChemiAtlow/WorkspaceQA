@@ -193,6 +193,14 @@ export const projectsControllers: IConroller = {
                     throw new UnauthorizedException('You are not an admin of this project');
                 }
                 await project.updateOne({ ...projectData }).exec();
+                project.users.forEach((usr) => {
+                    getSocketIO()
+                        .sockets.to(`user${usr}`)
+                        .emit('projects', {
+                            action: 'rename',
+                            project: { id: projectId, name: project.name },
+                        });
+                });
                 res.send({ ...project.toObject(), archived: undefined, ...projectData });
             } catch (err) {
                 if (err instanceof HttpException) {
