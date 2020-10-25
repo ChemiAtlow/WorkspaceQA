@@ -166,5 +166,41 @@ export const projectsControllers: IConroller = {
             }
         },
     },
-    //renameProject: {},
+    renameProject: {
+        path: '/:projectId',
+        method: 'patch',
+        authSafe: true,
+        middleware: [validationMiddleware(CreateProjectDto)],
+        controller: async (req, res) => {
+            const { body, user, params } = req;
+            if (user === undefined) {
+                throw new InternalServerException('An error happened with authentication');
+            }
+            const projectData: CreateProjectDto = body;
+            const { _id: id } = user;
+            const { projectId } = params;
+            try {
+                const project = await projectModel
+                    .findOne({ _id: projectId, archived: { $ne: true } })
+                    .exec();
+                if (!project) {
+                    throw new ProjectNotFoundException(projectId);
+                }
+                const isOwnerOrAdmin = project.users.some(
+                    (usr) => id.equals(usr.id) && (usr.role === 'Owner' || usr.role === 'Admin')
+                );
+                if (!isOwnerOrAdmin) {
+                    throw new UnauthorizedException('You are not an admin of this project');
+                }
+                await project.updateOne({ ...projectData }).exec();
+                res.send({ ...project.toObject(), archived: undefined, ...projectData });
+            } catch (err) {
+                if (err instanceof HttpException) {
+                    throw err;
+                }
+                appLogger.error(err.message);
+                throw new InternalServerException('Issue updating project in DB');
+            }
+        },
+    },
 };
