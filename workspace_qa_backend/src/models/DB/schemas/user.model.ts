@@ -1,4 +1,4 @@
-import { Schema, model } from 'mongoose';
+import { Schema, model, Types } from 'mongoose';
 
 import { IUserModel, IUserDocumnet, IUser } from '../interfaces';
 import { appLogger } from '../../../services';
@@ -59,6 +59,17 @@ userSchema.statics.findOrCreate = async function (profile: IUser) {
         return user;
     }
     return await userModel.create(profile);
+};
+
+userSchema.statics.removeProjectIfExists = async function (
+    id: Types.ObjectId,
+    projectId: Types.ObjectId
+) {
+    const user = await userModel.findById(id);
+    if (user) {
+        user.projects = user.projects.filter((prj) => !projectId.equals(prj));
+        return user.save();
+    }
 };
 
 export const userModel = model<IUserDocumnet, IUserModel>('Users', userSchema);
