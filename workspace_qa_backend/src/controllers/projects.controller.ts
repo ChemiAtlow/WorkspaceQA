@@ -1,8 +1,16 @@
+import { Request, RequestHandler } from 'express';
+import { Types } from 'mongoose';
 import { IConroller } from '.';
-import { InternalServerException } from '../exceptions';
+import {
+    InternalServerException,
+    ProjectNotFoundException,
+    UnauthorizedException,
+} from '../exceptions';
 import { validationMiddleware } from '../middleware';
 import { CreateProjectDto } from '../models/DB/dtos';
+import { IUserDocumnet } from '../models/DB/interfaces';
 import { userModel, projectModel } from '../models/DB/schemas';
+import { appLogger, getSocketIO } from '../services';
 
 export const projectsControllers: IConroller = {
     getUsersProject: {
@@ -21,23 +29,7 @@ export const projectsControllers: IConroller = {
             res.send(userProjects);
         },
     },
-    getAProject: {
-        path: '/:projectId',
-        method: 'get',
-        authSafe: true,
-        controller: async (req, res) => {
-            const { user, params } = req;
-            if (user === undefined) {
-                throw new InternalServerException('An error happened with authentication');
-            }
-            const { projectId } = params;
-            const hasProject = user.projects.some((prj) => prj == projectId);
-            console.log(hasProject);
-            const project = await projectModel.findById(projectId).exec();
-            res.send(project);
-        },
-    },
-    create: {
+    createProject: {
         path: '/',
         method: 'post',
         authSafe: true,
@@ -57,10 +49,105 @@ export const projectsControllers: IConroller = {
                 });
                 user.projects.push(project);
                 await user.save();
-                res.send(project.toJSON());
+                appLogger.info(`user${id}`);
+                getSocketIO()
+                    .sockets.to(`user${id}`)
+                    .emit('projects', {
+                        action: 'create',
+                        project: {
+                            _id: project._id,
+                            name: project.name,
+                            users: [{ id, role: 'Owner' }],
+                        },
+                    });
+                res.status(201).send(project.toJSON());
             } catch (error) {
                 throw new InternalServerException('Issue creating project!');
             }
         },
     },
+    getAProject: {
+        path: '/:projectId',
+        method: 'get',
+        authSafe: true,
+        controller: async (req, res) => {
+            const { user, params } = req;
+            if (user === undefined) {
+                throw new InternalServerException('An error happened with authentication');
+            }
+            const { projectId } = params;
+            const hasProject = user.projects.some((prj) => prj.equals(projectId));
+            if (!hasProject) {
+                throw new UnauthorizedException(
+                    'Your user is not connected to the requested project!'
+                );
+            }
+            const project = await projectModel
+                // .findOne({ _id: projectId, users: { $elemMatch: { role: 'Removed' } } })
+                .aggregate([
+                    {
+                        $match: {
+                            users: {
+                                $elemMatch: {
+                                    $and: [{ role: { $ne: 'Removed' } }],
+                                },
+                            },
+                        },
+                    },
+                    { $match: { _id: Types.ObjectId(projectId) } },
+                    { $match: { archived: { $ne: true } } },
+                    { $limit: 1 },
+                    {
+                        $project: {
+                            questions: 1,
+                            name: 1,
+                            users: {
+                                $filter: {
+                                    input: '$users',
+                                    as: 'users',
+                                    cond: {
+                                        $and: [{ $ne: ['$$users.role', 'Removed'] }],
+                                    },
+                                },
+                            },
+                        },
+                    },
+                ])
+                .exec();
+            res.send(project?.[0]);
+        },
+    },
+    removeProject: {
+        path: '/:projectId',
+        method: 'delete',
+        authSafe: true,
+        controller: async (req, res) => {
+            const { user, params } = req;
+            if (user === undefined) {
+                throw new InternalServerException('An error happened with authentication');
+            }
+            const { projectId } = params;
+            const project = await projectModel.findOne({ _id: projectId, archived: { $ne: true } });
+            if (!project) {
+                throw new ProjectNotFoundException(projectId);
+            }
+            const isOwner = project.users.some(
+                (usr) => user._id.equals(usr.id) && usr.role === 'Owner'
+            );
+            if (!isOwner) {
+                throw new UnauthorizedException('You are not the owner of this project!');
+            }
+            const users = await project.archive();
+            users.forEach((usr) => {
+                getSocketIO()
+                    .sockets.to(`user${usr}`)
+                    .emit('projects', {
+                        action: 'delete',
+                        project: { id: projectId, name: project.name },
+                    });
+            });
+            res.send({ ...project.toObject(), archived: undefined });
+        },
+    },
+    //renameProject: {},
 };
