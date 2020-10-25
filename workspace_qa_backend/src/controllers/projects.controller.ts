@@ -87,6 +87,8 @@ export const projectsControllers: IConroller = {
                 .aggregate([
                     {
                         $match: {
+                            _id: Types.ObjectId(projectId),
+                            archived: { $ne: true },
                             users: {
                                 $elemMatch: {
                                     $and: [{ role: { $ne: 'Removed' } }],
@@ -94,8 +96,6 @@ export const projectsControllers: IConroller = {
                             },
                         },
                     },
-                    { $match: { _id: Types.ObjectId(projectId) } },
-                    { $match: { archived: { $ne: true } } },
                     { $limit: 1 },
                     {
                         $project: {
