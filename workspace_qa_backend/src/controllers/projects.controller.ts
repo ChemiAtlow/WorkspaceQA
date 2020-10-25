@@ -2,6 +2,7 @@ import { Request, RequestHandler } from 'express';
 import { Types } from 'mongoose';
 import { IConroller } from '.';
 import {
+    HttpException,
     InternalServerException,
     ProjectNotFoundException,
     UnauthorizedException,
@@ -82,39 +83,44 @@ export const projectsControllers: IConroller = {
                     'Your user is not connected to the requested project!'
                 );
             }
-            const project = await projectModel
-                // .findOne({ _id: projectId, users: { $elemMatch: { role: 'Removed' } } })
-                .aggregate([
-                    {
-                        $match: {
-                            _id: Types.ObjectId(projectId),
-                            archived: { $ne: true },
-                            users: {
-                                $elemMatch: {
-                                    $and: [{ role: { $ne: 'Removed' } }],
-                                },
-                            },
-                        },
-                    },
-                    { $limit: 1 },
-                    {
-                        $project: {
-                            questions: 1,
-                            name: 1,
-                            users: {
-                                $filter: {
-                                    input: '$users',
-                                    as: 'users',
-                                    cond: {
-                                        $and: [{ $ne: ['$$users.role', 'Removed'] }],
+            try {
+                const project = await projectModel
+                    // .findOne({ _id: projectId, users: { $elemMatch: { role: 'Removed' } } })
+                    .aggregate([
+                        {
+                            $match: {
+                                _id: Types.ObjectId(projectId),
+                                archived: { $ne: true },
+                                users: {
+                                    $elemMatch: {
+                                        $and: [{ role: { $ne: 'Removed' } }],
                                     },
                                 },
                             },
                         },
-                    },
-                ])
-                .exec();
-            res.send(project?.[0]);
+                        { $limit: 1 },
+                        {
+                            $project: {
+                                questions: 1,
+                                name: 1,
+                                users: {
+                                    $filter: {
+                                        input: '$users',
+                                        as: 'users',
+                                        cond: {
+                                            $and: [{ $ne: ['$$users.role', 'Removed'] }],
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    ])
+                    .exec();
+                res.send(project?.[0]);
+            } catch (error) {
+                appLogger.error(error.message);
+                throw new InternalServerException('Could not get project from DB!');
+            }
         },
     },
     removeProject: {
@@ -127,26 +133,37 @@ export const projectsControllers: IConroller = {
                 throw new InternalServerException('An error happened with authentication');
             }
             const { projectId } = params;
-            const project = await projectModel.findOne({ _id: projectId, archived: { $ne: true } });
-            if (!project) {
-                throw new ProjectNotFoundException(projectId);
+            try {
+                const project = await projectModel.findOne({
+                    _id: projectId,
+                    archived: { $ne: true },
+                });
+                if (!project) {
+                    throw new ProjectNotFoundException(projectId);
+                }
+                const isOwner = project.users.some(
+                    (usr) => user._id.equals(usr.id) && usr.role === 'Owner'
+                );
+                if (!isOwner) {
+                    throw new UnauthorizedException('You are not the owner of this project!');
+                }
+                const users = await project.archive();
+                users.forEach((usr) => {
+                    getSocketIO()
+                        .sockets.to(`user${usr}`)
+                        .emit('projects', {
+                            action: 'delete',
+                            project: { id: projectId, name: project.name },
+                        });
+                });
+                res.send({ ...project.toObject(), archived: undefined });
+            } catch (err) {
+                if (err instanceof HttpException) {
+                    throw err;
+                }
+                appLogger.error(err.message);
+                throw new InternalServerException('Issue removing project from DB');
             }
-            const isOwner = project.users.some(
-                (usr) => user._id.equals(usr.id) && usr.role === 'Owner'
-            );
-            if (!isOwner) {
-                throw new UnauthorizedException('You are not the owner of this project!');
-            }
-            const users = await project.archive();
-            users.forEach((usr) => {
-                getSocketIO()
-                    .sockets.to(`user${usr}`)
-                    .emit('projects', {
-                        action: 'delete',
-                        project: { id: projectId, name: project.name },
-                    });
-            });
-            res.send({ ...project.toObject(), archived: undefined });
         },
     },
     //renameProject: {},
