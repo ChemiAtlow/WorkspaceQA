@@ -5,7 +5,7 @@ import { json, urlencoded } from 'body-parser';
 import { initialize } from 'passport';
 
 import { Controller } from './controllers';
-import { errorMiddleware } from './middleware';
+import { errorMiddleware, paramMiddleware } from './middleware';
 import { appLogger, init, LogStream, mongoDBConnect } from './services';
 
 export class App {
@@ -27,6 +27,7 @@ export class App {
         this.app.use(urlencoded({ extended: false }));
         this.app.use(json());
         this.app.use(initialize());
+        this.app.param('projectId', paramMiddleware('projectId'));
     }
 
     private initializeErrorHandling() {
