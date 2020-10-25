@@ -2,8 +2,9 @@ import { Schema, model } from 'mongoose';
 
 import { IProjectDocumnet, IProjectModel } from '../interfaces';
 import { appLogger } from '../../../services';
+import { userModel } from './user.model';
 
-const projectSchema = new Schema<IProjectModel>({
+const projectSchema = new Schema<IProjectDocumnet>({
     name: {
         type: String,
         required: true,
@@ -17,7 +18,7 @@ const projectSchema = new Schema<IProjectModel>({
             },
             name: String,
             avatar: String,
-            role: { type: String, enum: ['Owner', 'Admin', 'User'] },
+            role: { type: String, enum: ['Owner', 'Admin', 'User', 'Removed'] },
         },
     ],
     questions: [
@@ -26,6 +27,11 @@ const projectSchema = new Schema<IProjectModel>({
             type: Schema.Types.ObjectId,
         },
     ],
+    archived: {
+        type: Boolean,
+        required: false,
+        default: false,
+    },
 });
 
 // post saving user
@@ -33,5 +39,19 @@ projectSchema.post<IProjectDocumnet>('save', function (project, next) {
     appLogger.debug(`new project saved: ${project.name} - ${project._id}`);
     next();
 });
+
+projectSchema.methods.archive = async function () {
+    const promises: Promise<any>[] = [];
+    const usersChanged: string[] = [];
+    this.users.forEach(async (usr) => {
+        if (usr.role !== 'Removed') {
+            promises.push(userModel.removeProjectIfExists(usr.id, this._id));
+            usersChanged.push(usr.id);
+        }
+    });
+    this.archived = true;
+    await Promise.all([...promises, this.save()]);
+    return usersChanged;
+};
 
 export const projectModel = model<IProjectDocumnet, IProjectModel>('Projects', projectSchema);

@@ -7,13 +7,16 @@ export interface IProject {
         id: IUserDocumnet['_id'];
         name: IUserDocumnet['name'];
         avatar: IUserDocumnet['avatar'];
-        role: 'Owner' | 'Admin' | 'User';
+        role: 'Owner' | 'Admin' | 'User' | 'Removed';
     }>;
     questions: IQuestionDocumnet['_id'][];
+    archived?: boolean;
 }
 
 //Methods - if needed.
-export interface IProjectDocumnet extends Document, IProject {}
+export interface IProjectDocumnet extends Document, IProject {
+    archive(): Promise<string[]>;
+}
 
 //Static methods - if needed.
 export interface IProjectModel extends Model<IProjectDocumnet> {}
