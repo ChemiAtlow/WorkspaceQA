@@ -8,8 +8,7 @@ import {
     UnauthorizedException,
 } from '../exceptions';
 import { validationMiddleware } from '../middleware';
-import { CreateProjectDto } from '../models/DB/dtos';
-import { IUserDocumnet } from '../models/DB/interfaces';
+import { CreateProjectDto } from '../models/dtos';
 import { userModel, projectModel } from '../models/DB/schemas';
 import { appLogger, getSocketIO } from '../services';
 
