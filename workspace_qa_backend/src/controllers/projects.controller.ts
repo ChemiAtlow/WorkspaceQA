@@ -195,10 +195,10 @@ export const projectsControllers: IConroller = {
                 await project.updateOne({ ...projectData }).exec();
                 project.users.forEach((usr) => {
                     getSocketIO()
-                        .sockets.to(`user${usr}`)
+                        .sockets.to(`user${usr.id}`)
                         .emit('projects', {
                             action: 'rename',
-                            project: { id: projectId, name: project.name },
+                            project: { id: projectId, ...projectData },
                         });
                 });
                 res.send({ ...project.toObject(), archived: undefined, ...projectData });
