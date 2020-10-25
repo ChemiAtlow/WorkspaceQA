@@ -181,7 +181,7 @@ export const projectsControllers: IConroller = {
             try {
                 const project = await projectModel
                     .findOne({ _id: projectId, archived: { $ne: true } })
-                    .exec();
+                    .select('-archived');
                 if (!project) {
                     throw new ProjectNotFoundException(projectId);
                 }
@@ -200,7 +200,7 @@ export const projectsControllers: IConroller = {
                             project: { id: projectId, ...projectData },
                         });
                 });
-                res.send({ ...project.toObject(), archived: undefined, ...projectData });
+                res.send({ ...project.toObject(), ...projectData });
             } catch (err) {
                 if (err instanceof HttpException) {
                     throw err;
