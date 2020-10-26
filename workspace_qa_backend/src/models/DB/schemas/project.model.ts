@@ -34,9 +34,9 @@ const projectSchema = new Schema<IProjectDocumnet>({
     },
 });
 
-// post saving user
+// post saving project
 projectSchema.post<IProjectDocumnet>('save', function (project, next) {
-    appLogger.debug(`new project saved: ${project.name} - ${project._id}`);
+    appLogger.debug(`Project saved: ${project.name} - ${project._id}`);
     next();
 });
 
