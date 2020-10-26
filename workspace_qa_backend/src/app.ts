@@ -1,5 +1,6 @@
 import cors from 'cors';
 import morgan from 'morgan';
+import compression from 'compression';
 import express, { Application } from 'express';
 import { json, urlencoded } from 'body-parser';
 import { initialize } from 'passport';
@@ -27,6 +28,7 @@ export class App {
         this.app.use(urlencoded({ extended: false }));
         this.app.use(json());
         this.app.use(initialize());
+        this.app.use(compression());
         this.app.param('projectId', paramMiddleware('projectId'));
     }
 
