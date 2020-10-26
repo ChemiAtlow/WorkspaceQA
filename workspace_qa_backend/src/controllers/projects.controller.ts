@@ -49,7 +49,6 @@ export const projectsControllers: IConroller = {
                 });
                 user.projects.push(project);
                 await user.save();
-                appLogger.info(`user${id}`);
                 getSocketIO()
                     .sockets.to(`user${id}`)
                     .emit('projects', {
@@ -152,7 +151,7 @@ export const projectsControllers: IConroller = {
                         .sockets.to(`user${usr}`)
                         .emit('projects', {
                             action: 'delete',
-                            project: { id: projectId, name: project.name },
+                            project: { _id: projectId, name: project.name },
                         });
                 });
                 res.send({ ...project.toObject(), archived: undefined });
@@ -197,7 +196,7 @@ export const projectsControllers: IConroller = {
                         .sockets.to(`user${usr.id}`)
                         .emit('projects', {
                             action: 'rename',
-                            project: { id: projectId, ...projectData },
+                            project: { _id: projectId, ...projectData },
                         });
                 });
                 res.send({ ...project.toObject(), ...projectData });
