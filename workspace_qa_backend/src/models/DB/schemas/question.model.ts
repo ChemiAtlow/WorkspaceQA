@@ -60,7 +60,7 @@ const questionSchema = new Schema<IQuestionDocumnet>(
         question: commonResponse,
         answers: [commonResponse],
     },
-    { toJSON: { virtuals: true } }
+    { toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
 questionSchema.virtual('answerCount').get(function (this: IQuestionDocumnet) {

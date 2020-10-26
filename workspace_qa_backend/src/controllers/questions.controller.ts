@@ -3,7 +3,7 @@ import { HttpException, InternalServerException, UnauthorizedException } from '.
 import { validationMiddleware } from '../middleware';
 import { projectModel, questionModel } from '../models/DB/schemas';
 import { CreateQuestionDto } from '../models/dtos';
-import { appLogger } from '../services';
+import { appLogger, getSocketIO } from '../services';
 
 export const questionsController: IConroller = {
     getQuestions: {
@@ -74,7 +74,17 @@ export const questionsController: IConroller = {
                 });
                 project.questions.push({ _id: question, title: questionData.title });
                 await Promise.all([question.save(), project.save()]);
-                res.send(question);
+                project.users.forEach((usr) => {
+                    getSocketIO()
+                        .sockets.to(`user${usr.id}`)
+                        .emit('questions', {
+                            action: 'create',
+                            question: {
+                                ...question.toObject(),
+                            },
+                        });
+                });
+                res.status(201).send(question);
             } catch (err) {
                 appLogger.error(err.message);
                 if (err instanceof HttpException) {
