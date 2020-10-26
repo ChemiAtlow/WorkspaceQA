@@ -1,5 +1,3 @@
-import { Request, RequestHandler } from 'express';
-import { Types } from 'mongoose';
 import { IConroller } from '.';
 import {
     HttpException,
@@ -9,7 +7,7 @@ import {
 } from '../exceptions';
 import { validationMiddleware } from '../middleware';
 import { CreateProjectDto } from '../models/dtos';
-import { userModel, projectModel } from '../models/DB/schemas';
+import { userModel, projectModel, questionModel } from '../models/DB/schemas';
 import { appLogger, getSocketIO } from '../services';
 
 export const projectsControllers: IConroller = {
@@ -24,7 +22,7 @@ export const projectsControllers: IConroller = {
             }
             const userProjects = await userModel
                 .findById(user._id, 'name username')
-                .populate('projects', 'name users.role users.id')
+                .populate('projects')
                 .exec();
             res.send(userProjects);
         },
@@ -39,26 +37,19 @@ export const projectsControllers: IConroller = {
             if (user === undefined) {
                 throw new InternalServerException('An error happened with authentication');
             }
-            const { name, avatar, _id: id } = user;
+            const { _id: id } = user;
             const projectData: CreateProjectDto = body;
             try {
-                const project = await projectModel.create({
+                const project = new projectModel({
                     ...projectData,
-                    questions: [],
-                    users: [{ name, avatar, id, role: 'Owner' }],
+                    owner: user,
                 });
                 user.projects.push(project);
-                await user.save();
-                getSocketIO()
-                    .sockets.to(`user${id}`)
-                    .emit('projects', {
-                        action: 'create',
-                        project: {
-                            _id: project._id,
-                            name: project.name,
-                            users: [{ id, role: 'Owner' }],
-                        },
-                    });
+                await Promise.all([project.save(), user.save()]);
+                getSocketIO().sockets.to(`user${id}`).emit('projects', {
+                    action: 'create',
+                    project: project.toObject(),
+                });
                 res.status(201).send(project.toJSON());
             } catch (error) {
                 throw new InternalServerException('Issue creating project!');
@@ -83,40 +74,29 @@ export const projectsControllers: IConroller = {
             }
             try {
                 const project = await projectModel
-                    // .findOne({ _id: projectId, users: { $elemMatch: { role: 'Removed' } } })
-                    .aggregate([
-                        {
-                            $match: {
-                                _id: Types.ObjectId(projectId),
-                                archived: { $ne: true },
-                                users: {
-                                    $elemMatch: {
-                                        $and: [{ role: { $ne: 'Removed' } }],
-                                    },
-                                },
-                            },
-                        },
-                        { $limit: 1 },
-                        {
-                            $project: {
-                                questions: 1,
-                                name: 1,
-                                users: {
-                                    $filter: {
-                                        input: '$users',
-                                        as: 'users',
-                                        cond: {
-                                            $and: [{ $ne: ['$$users.role', 'Removed'] }],
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    ])
+                    .findOne({
+                        _id: projectId,
+                        archived: { $ne: true },
+                    })
                     .exec();
-                res.send(project?.[0]);
+                const questionsFetch = questionModel
+                    .find({ project: { $eq: projectId } })
+                    .select('_id title state answers ratings.total')
+                    .exec();
+                const usersFetch = userModel
+                    .find({ projects: project })
+                    .select('_id avatar name username')
+                    .exec();
+                const [questions, users] = await Promise.all([questionsFetch, usersFetch]);
+                if (!project) {
+                    throw new ProjectNotFoundException(projectId);
+                }
+                res.send({ ...project.toObject(), questions, users });
             } catch (error) {
                 appLogger.error(error.message);
+                if (error instanceof HttpException) {
+                    throw error;
+                }
                 throw new InternalServerException('Could not get project from DB!');
             }
         },
@@ -139,21 +119,24 @@ export const projectsControllers: IConroller = {
                 if (!project) {
                     throw new ProjectNotFoundException(projectId);
                 }
-                const isOwner = project.users.some(
-                    (usr) => user._id.equals(usr.id) && usr.role === 'Owner'
-                );
-                if (!isOwner) {
+                const isUserOwnerOfProject = user._id.equals(project.owner);
+                if (!isUserOwnerOfProject) {
                     throw new UnauthorizedException('You are not the owner of this project!');
                 }
-                const users = await project.archive();
-                users.forEach((usr) => {
-                    getSocketIO()
-                        .sockets.to(`user${usr}`)
-                        .emit('projects', {
-                            action: 'delete',
-                            project: { _id: projectId, name: project.name },
-                        });
-                });
+                const projectUpdate = project.updateOne({ archived: true });
+                const usersUpdate = userModel
+                    .updateMany({ projects: project }, { $pullAll: { projects: [project] } })
+                    .exec();
+                await Promise.all([projectUpdate, usersUpdate]);
+                // TODO: send over socket.
+                // users.forEach((usr) => {
+                //     getSocketIO()
+                //         .sockets.to(`user${usr}`)
+                //         .emit('projects', {
+                //             action: 'delete',
+                //             project: { _id: projectId, name: project.name },
+                //         });
+                // });
                 res.send({ ...project.toObject(), archived: undefined });
             } catch (err) {
                 if (err instanceof HttpException) {
@@ -178,27 +161,27 @@ export const projectsControllers: IConroller = {
             const { _id: id } = user;
             const { projectId } = params;
             try {
-                const project = await projectModel
-                    .findOne({ _id: projectId, archived: { $ne: true } })
-                    .select('-archived');
+                const project = await projectModel.findOne({
+                    _id: projectId,
+                    archived: { $ne: true },
+                });
                 if (!project) {
                     throw new ProjectNotFoundException(projectId);
                 }
-                const isOwnerOrAdmin = project.users.some(
-                    (usr) => id.equals(usr.id) && (usr.role === 'Owner' || usr.role === 'Admin')
-                );
-                if (!isOwnerOrAdmin) {
-                    throw new UnauthorizedException('You are not an admin of this project');
+                const isUserOwnerOfProject = user._id.equals(project.owner);
+                if (!isUserOwnerOfProject) {
+                    throw new UnauthorizedException('You are not thoe owner of this project');
                 }
                 await project.updateOne({ ...projectData }).exec();
-                project.users.forEach((usr) => {
-                    getSocketIO()
-                        .sockets.to(`user${usr.id}`)
-                        .emit('projects', {
-                            action: 'rename',
-                            project: { _id: projectId, ...projectData },
-                        });
-                });
+                // TODO: send via socket
+                // project.users.forEach((usr) => {
+                //     getSocketIO()
+                //         .sockets.to(`user${usr.id}`)
+                //         .emit('projects', {
+                //             action: 'rename',
+                //             project: { _id: projectId, ...projectData },
+                //         });
+                // });
                 res.send({ ...project.toObject(), ...projectData });
             } catch (err) {
                 if (err instanceof HttpException) {

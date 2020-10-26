@@ -19,6 +19,24 @@ const commonResponse = {
             required: false,
         },
     ],
+    ratings: {
+        total: {
+            type: Number,
+            default: 0,
+        },
+        votes: [
+            {
+                user: {
+                    type: Schema.Types.ObjectId,
+                    ref: 'Users',
+                },
+                vote: {
+                    type: String,
+                    enum: ['up, down'],
+                },
+            },
+        ],
+    },
     user: {
         _id: {
             ref: 'User',
