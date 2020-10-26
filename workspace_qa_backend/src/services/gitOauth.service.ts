@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { HTTPStatuses } from '../constants';
-import { HttpException, InternalServerException } from '../exceptions';
+import { BadRequestException, HttpException, InternalServerException } from '../exceptions';
 import {
     GithubCodeResponse,
     GithubAccessTokenData,
@@ -63,7 +63,7 @@ const getGihubPrivateEmail = async ({ accessToken, tokenType }: GithubAccessToke
 
 export const getUserDataFromCallback = async (code: string) => {
     if (!code) {
-        throw new HttpException(HTTPStatuses.clientError, 'No callback code recieved!');
+        throw new BadRequestException('No callback code recieved!');
     }
     const accessTokenResult = await getGithubAccessToken(code);
     const userData = await getGithubUserData(accessTokenResult);

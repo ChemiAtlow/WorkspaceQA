@@ -3,6 +3,6 @@ import { HttpException } from './HttpException';
 
 export class UnauthorizedException extends HttpException {
     constructor(data: string) {
-        super(HTTPStatuses.unauthorized, `Unauthorized request denied: ${data}`);
+        super(HTTPStatuses.forbidden, `Unauthorized request denied: ${data}`);
     }
 }

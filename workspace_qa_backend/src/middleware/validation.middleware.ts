@@ -1,8 +1,7 @@
 import { plainToClass } from 'class-transformer';
 import { validate } from 'class-validator';
 import { RequestHandler } from 'express';
-import { HTTPStatuses } from '../constants';
-import { HttpException } from '../exceptions';
+import { BadRequestException } from '../exceptions';
 
 export function validationMiddleware<T>(
     type: { new (): T },
@@ -14,7 +13,7 @@ export function validationMiddleware<T>(
             const message = errors
                 .map((error) => Object.values(error.constraints || []))
                 .join(', ');
-            return next(new HttpException(HTTPStatuses.clientError, message));
+            return next(new BadRequestException(message));
         }
         return next();
     };

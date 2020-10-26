@@ -1,13 +1,11 @@
 export enum HTTPStatuses {
     ok = 200,
-    empty = 204,
-    clientError = 400,
-    notFound = 404,
+    created = 201,
+    badRequest = 400,
     unauthorized = 401,
     forbidden = 403,
-    conflict = 409,
+    notFound = 404,
+    iAmATeapot = 418,
     internalServerError = 500,
     notImplemented = 501,
-    iAmATeapot = 418,
-    unprocessableEntityError = 422,
 }

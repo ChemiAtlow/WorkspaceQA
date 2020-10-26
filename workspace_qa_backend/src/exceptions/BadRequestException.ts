@@ -3,6 +3,6 @@ import { HttpException } from './HttpException';
 
 export class BadRequestException extends HttpException {
     constructor(data: string) {
-        super(HTTPStatuses.clientError, `Bad request: ${data}`);
+        super(HTTPStatuses.badRequest, `Bad request: ${data}`);
     }
 }
