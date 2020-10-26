@@ -72,7 +72,7 @@ export const questionsController: IConroller = {
                     },
                     answers: [],
                 });
-                project.questions.push({ _id: question, title: questionData.title });
+                project.questions.push(question);
                 await Promise.all([question.save(), project.save()]);
                 project.users.forEach((usr) => {
                     getSocketIO()

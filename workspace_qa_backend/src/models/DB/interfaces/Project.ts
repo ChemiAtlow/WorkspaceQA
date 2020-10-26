@@ -9,7 +9,7 @@ export interface IProject {
         avatar: IUserDocumnet['avatar'];
         role: 'Owner' | 'Admin' | 'User' | 'Removed';
     }>;
-    questions: Array<{ _id: IQuestionDocumnet['_id']; title: string }>;
+    questions: Array<IQuestionDocumnet['_id']>;
     archived?: boolean;
 }
 
