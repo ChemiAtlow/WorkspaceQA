@@ -1,10 +1,10 @@
-import { IsString, IsIn } from 'class-validator';
+import { IsString } from 'class-validator';
 
-export class QuestionDto {
+export class CreateQuestionDto {
     @IsString()
     public title!: string;
     @IsString()
     public filePath!: string;
-    @IsIn(['Initial', 'Answered', 'Accepted', 'Closed'])
-    public state!: 'Initial' | 'Answered' | 'Accepted' | 'Closed';
+    @IsString()
+    public message!: string;
 }

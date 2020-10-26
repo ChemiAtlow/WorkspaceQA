@@ -1,6 +1,8 @@
 import { IConroller } from '.';
 import { HttpException, InternalServerException, UnauthorizedException } from '../exceptions';
-import { projectModel } from '../models/DB/schemas';
+import { validationMiddleware } from '../middleware';
+import { projectModel, questionModel } from '../models/DB/schemas';
+import { CreateQuestionDto } from '../models/dtos';
 import { appLogger } from '../services';
 
 export const questionsController: IConroller = {
@@ -30,6 +32,55 @@ export const questionsController: IConroller = {
                 }
                 appLogger.error(error.message);
                 throw new InternalServerException('Issue getting question');
+            }
+        },
+    },
+    createQuestion: {
+        path: '/',
+        method: 'post',
+        authSafe: true,
+        middleware: [validationMiddleware(CreateQuestionDto)],
+        controller: async (req, res) => {
+            const { body, user, projectId } = req;
+            if (user === undefined) {
+                throw new InternalServerException('An error happened with authentication');
+            }
+            const { name, avatar, _id } = user;
+            const questionData: CreateQuestionDto = body;
+            try {
+                const project = await projectModel.findOne({
+                    _id: projectId,
+                    users: { $elemMatch: { id: { $eq: user.id }, role: { $ne: 'Removed' } } },
+                });
+                if (!project) {
+                    throw new UnauthorizedException(
+                        'You are not authorized to ask in this project!'
+                    );
+                }
+                const question = new questionModel({
+                    title: questionData.title,
+                    filePath: questionData.filePath,
+                    project,
+                    question: {
+                        message: questionData.message,
+                        revisions: [],
+                        user: {
+                            _id,
+                            name,
+                            avatar,
+                        },
+                    },
+                    answers: [],
+                });
+                project.questions.push({ _id: question, title: questionData.title });
+                await Promise.all([question.save(), project.save()]);
+                res.send(question);
+            } catch (err) {
+                appLogger.error(err.message);
+                if (err instanceof HttpException) {
+                    throw err;
+                }
+                throw new InternalServerException('Issue creating the question!');
             }
         },
     },
