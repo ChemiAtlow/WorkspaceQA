@@ -20,7 +20,7 @@ const commonResponse = {
         },
     ],
     user: {
-        id: {
+        _id: {
             ref: 'User',
             type: Schema.Types.ObjectId,
             required: true,
@@ -36,24 +36,35 @@ const commonResponse = {
     },
 };
 
-const questionSchema = new Schema<IQuestionDocumnet>({
-    title: {
-        type: String,
-        required: true,
-        trim: true,
+const questionSchema = new Schema<IQuestionDocumnet>(
+    {
+        title: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+        filePath: {
+            type: String,
+            required: true,
+            trim: true,
+        },
+        state: {
+            type: String,
+            enum: ['New', 'Answered', 'Accepted', 'Closed'],
+            default: 'New',
+        },
+        project: {
+            type: Schema.Types.ObjectId,
+            required: true,
+        },
+        question: commonResponse,
+        answers: [commonResponse],
     },
-    filePath: {
-        type: String,
-        required: true,
-        trim: true,
-    },
-    state: {
-        type: String,
-        enum: ['New', 'Answered', 'Accepted', 'Closed'],
-        default: 'New',
-    },
-    question: commonResponse,
-    answers: [commonResponse],
+    { toJSON: { virtuals: true } }
+);
+
+questionSchema.virtual('answerCount').get(function (this: IQuestionDocumnet) {
+    return this.answers.length;
 });
 
 // post saving question

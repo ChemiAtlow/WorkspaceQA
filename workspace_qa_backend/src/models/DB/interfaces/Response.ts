@@ -5,7 +5,7 @@ export interface IResponse {
     edited: boolean;
     revisions: string[];
     user: {
-        id: IUserDocumnet['_id'];
+        _id: IUserDocumnet['_id'];
         name: IUserDocumnet['name'];
         avatar: IUserDocumnet['avatar'];
     };
