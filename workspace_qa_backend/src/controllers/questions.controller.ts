@@ -4,7 +4,7 @@ import { projectModel } from '../models/DB/schemas';
 import { appLogger } from '../services';
 
 export const questionsController: IConroller = {
-    getQuestion: {
+    getQuestions: {
         path: '/',
         method: 'get',
         authSafe: true,
