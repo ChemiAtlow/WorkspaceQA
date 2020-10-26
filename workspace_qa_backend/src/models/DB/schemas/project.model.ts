@@ -23,8 +23,16 @@ const projectSchema = new Schema<IProjectDocumnet>({
     ],
     questions: [
         {
-            ref: 'Questions',
-            type: Schema.Types.ObjectId,
+            id: {
+                ref: 'Questions',
+                type: Schema.Types.ObjectId,
+                required: true,
+            },
+            title: {
+                type: String,
+                required: true,
+                trim: true,
+            },
         },
     ],
     archived: {
