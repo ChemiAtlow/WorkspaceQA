@@ -66,14 +66,14 @@ const questionSchema = new Schema<IQuestionDocumnet>(
             required: true,
             trim: true,
         },
+        project: {
+            type: Schema.Types.ObjectId,
+            required: true,
+        },
         state: {
             type: String,
             enum: ['New', 'Answered', 'Accepted', 'Closed'],
             default: 'New',
-        },
-        project: {
-            type: Schema.Types.ObjectId,
-            required: true,
         },
         question: commonResponse,
         answers: [commonResponse],
