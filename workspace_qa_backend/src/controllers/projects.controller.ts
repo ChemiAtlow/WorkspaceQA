@@ -8,7 +8,7 @@ import {
 import { validationMiddleware } from '../middleware';
 import { CreateProjectDto } from '../models/dtos';
 import { userModel, projectModel, questionModel } from '../models/DB/schemas';
-import { appLogger, getSocketIO } from '../services';
+import { appLogger, emitProjectCreated, emitProjectEdited, emitProjectRemoved } from '../services';
 
 export const projectsControllers: IConroller = {
     getUsersProject: {
@@ -48,12 +48,8 @@ export const projectsControllers: IConroller = {
                 });
                 await project.save();
                 await user.updateOne({ $push: { projects: project } }).exec();
-                getSocketIO()
-                    .sockets.to(`user${id}`)
-                    .emit('projects', {
-                        action: 'create',
-                        project: { ...project.toJSON(), owner: id },
-                    });
+                const { _id, name } = project;
+                emitProjectCreated(id, { _id, name });
                 res.status(201).send(project.toJSON());
             } catch (error) {
                 appLogger.error(error.message);
@@ -133,12 +129,7 @@ export const projectsControllers: IConroller = {
                     .updateMany({ projects: project }, { $pullAll: { projects: [project] } })
                     .exec();
                 await Promise.all([projectUpdate, usersUpdate]);
-                getSocketIO()
-                    .sockets.to(`project${project._id}`)
-                    .emit('projects', {
-                        action: 'delete',
-                        project: { _id: projectId, name: project.name },
-                    });
+                emitProjectRemoved({ _id: projectId, name: project.name });
                 res.send({ ...project.toObject(), archived: undefined });
             } catch (err) {
                 if (err instanceof HttpException) {
@@ -174,12 +165,7 @@ export const projectsControllers: IConroller = {
                     throw new UnauthorizedException('You are not thoe owner of this project');
                 }
                 await project.updateOne({ ...projectData }).exec();
-                getSocketIO()
-                    .sockets.to(`project${projectId}`)
-                    .emit('projects', {
-                        action: 'rename',
-                        project: { _id: projectId, ...projectData },
-                    });
+                emitProjectEdited({ _id: projectId, name: project.name });
                 res.send({ ...project.toObject(), ...projectData });
             } catch (err) {
                 if (err instanceof HttpException) {

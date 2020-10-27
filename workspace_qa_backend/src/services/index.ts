@@ -4,8 +4,10 @@ export { createJWTToken, isValidJWTToken } from './jwt.service';
 export { getUserDataFromCallback } from './gitOauth.service';
 export { passportConfig } from './passport.service';
 export {
-    getSocketIO,
-    init,
+    initSocketIO,
+    emitProjectCreated,
+    emitProjectRemoved,
+    emitProjectEdited,
     emitQuestionCreated,
     emitQuestionEditedAtProjectLevel,
 } from './socket.service';

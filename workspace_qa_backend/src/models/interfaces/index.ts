@@ -6,4 +6,4 @@ export {
     GithubAccessTokenResponse,
     GithubEmailResponse,
 } from './GithubResponse';
-export { QuestionProjectLevel } from './SocketEmitting';
+export { QuestionProjectLevel, ProjectUserLevel } from './SocketEmitting';
