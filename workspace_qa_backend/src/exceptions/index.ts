@@ -1,5 +1,5 @@
 export { HttpException } from './HttpException';
-export { UserNotFoundException } from './UserNotFoundException';
+export { QuestionNotFoundException } from './QuestionNotFoundException';
 export { BadRequestException } from './BadRequestException';
 export { InternalServerException } from './InternalServerEXception';
 export { UnauthorizedException } from './UnathorizedException';
