@@ -8,6 +8,7 @@ import { initialize } from 'passport';
 import { Controller } from './controllers';
 import { errorMiddleware, paramMiddleware } from './middleware';
 import { appLogger, init, LogStream, mongoDBConnect } from './services';
+import { SocketSubscription } from './models/interfaces/SocketSubscription';
 
 export class App {
     public readonly app: Application;
@@ -52,9 +53,11 @@ export class App {
             appLogger.debug(`Server started listening on the port ${this.port}`);
         });
         init(server).on('connection', (socket) => {
-            socket.on('subscribe', (roomData) => {
-                socket.leave(`user${roomData.from}`);
-                socket.join(`user${roomData.to}`);
+            socket.on('subscribe', (roomData: SocketSubscription) => {
+                socket.leaveAll();
+                const { user, projects } = roomData;
+                socket.join(`user${user}`);
+                projects.forEach((prj) => socket.join(`project${prj._id}`));
             });
         });
     }

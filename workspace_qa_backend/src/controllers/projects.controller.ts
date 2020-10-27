@@ -44,14 +44,17 @@ export const projectsControllers: IConroller = {
                     ...projectData,
                     owner: user,
                 });
-                user.projects.push(project);
-                await Promise.all([project.save(), user.save()]);
-                getSocketIO().sockets.to(`user${id}`).emit('projects', {
-                    action: 'create',
-                    project: project.toObject(),
-                });
+                await project.save();
+                await user.updateOne({ $push: { projects: project } }).exec();
+                getSocketIO()
+                    .sockets.to(`user${id}`)
+                    .emit('projects', {
+                        action: 'create',
+                        project: { ...project.toJSON(), owner: id },
+                    });
                 res.status(201).send(project.toJSON());
             } catch (error) {
+                appLogger.error(error.message);
                 throw new InternalServerException('Issue creating project!');
             }
         },
@@ -128,15 +131,12 @@ export const projectsControllers: IConroller = {
                     .updateMany({ projects: project }, { $pullAll: { projects: [project] } })
                     .exec();
                 await Promise.all([projectUpdate, usersUpdate]);
-                // TODO: send over socket.
-                // users.forEach((usr) => {
-                //     getSocketIO()
-                //         .sockets.to(`user${usr}`)
-                //         .emit('projects', {
-                //             action: 'delete',
-                //             project: { _id: projectId, name: project.name },
-                //         });
-                // });
+                getSocketIO()
+                    .sockets.to(`project${project._id}`)
+                    .emit('projects', {
+                        action: 'delete',
+                        project: { _id: projectId, name: project.name },
+                    });
                 res.send({ ...project.toObject(), archived: undefined });
             } catch (err) {
                 if (err instanceof HttpException) {
@@ -158,7 +158,6 @@ export const projectsControllers: IConroller = {
                 throw new InternalServerException('An error happened with authentication');
             }
             const projectData: CreateProjectDto = body;
-            const { _id: id } = user;
             const { projectId } = params;
             try {
                 const project = await projectModel.findOne({
@@ -173,15 +172,12 @@ export const projectsControllers: IConroller = {
                     throw new UnauthorizedException('You are not thoe owner of this project');
                 }
                 await project.updateOne({ ...projectData }).exec();
-                // TODO: send via socket
-                // project.users.forEach((usr) => {
-                //     getSocketIO()
-                //         .sockets.to(`user${usr.id}`)
-                //         .emit('projects', {
-                //             action: 'rename',
-                //             project: { _id: projectId, ...projectData },
-                //         });
-                // });
+                getSocketIO()
+                    .sockets.to(`project${projectId}`)
+                    .emit('projects', {
+                        action: 'rename',
+                        project: { _id: projectId, ...projectData },
+                    });
                 res.send({ ...project.toObject(), ...projectData });
             } catch (err) {
                 if (err instanceof HttpException) {
