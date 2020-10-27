@@ -6,7 +6,7 @@ import { json, urlencoded } from 'body-parser';
 import { initialize } from 'passport';
 
 import { Controller } from './controllers';
-import { errorMiddleware, paramMiddleware } from './middleware';
+import { errorMiddleware, notFoundMiddleware, paramMiddleware } from './middleware';
 import { appLogger, init, LogStream, mongoDBConnect } from './services';
 import { SocketSubscription } from './models/interfaces/SocketSubscription';
 
@@ -20,6 +20,7 @@ export class App {
 
         this.initializeMiddlewares();
         this.initializeControllers(controllers);
+        this.initializeFallbackRoute();
         this.initializeErrorHandling();
     }
 
@@ -41,6 +42,10 @@ export class App {
         controllers.forEach((controller) => {
             this.app.use(controller.path, controller.router);
         });
+    }
+
+    private initializeFallbackRoute() {
+        this.app.use('*', notFoundMiddleware);
     }
 
     private async connectToDatabase() {
