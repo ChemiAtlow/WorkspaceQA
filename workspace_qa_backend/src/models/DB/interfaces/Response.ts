@@ -1,3 +1,4 @@
+import { Document, Model } from 'mongoose';
 import { IUserDocumnet } from './User';
 
 export interface IResponse {
@@ -14,3 +15,9 @@ export interface IResponse {
         avatar: IUserDocumnet['avatar'];
     };
 }
+
+//Methods - if needed.
+export interface IResponseDocumnet extends Document, IResponse {}
+
+//Static methods - if needed.
+export interface IResponseModel extends Model<IResponseDocumnet> {}

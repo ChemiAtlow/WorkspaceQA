@@ -7,7 +7,7 @@ import {
     UnauthorizedException,
 } from '../exceptions';
 import { validationMiddleware } from '../middleware';
-import { projectModel, questionModel } from '../models/DB/schemas';
+import { questionModel, responseModel } from '../models/DB/schemas';
 import { CreateQuestionDto } from '../models/dtos';
 import { appLogger, getSocketIO } from '../services';
 
@@ -29,25 +29,26 @@ export const questionsController: IConroller = {
             const { name, avatar, _id } = user;
             const { title, filePath, message } = body as CreateQuestionDto;
             try {
+                const questionResponse = new responseModel({
+                    message,
+                    revisions: [],
+                    ratings: {
+                        votes: [],
+                    },
+                    user: {
+                        _id,
+                        name,
+                        avatar,
+                    },
+                });
                 const question = new questionModel({
                     title,
                     filePath,
                     project: projectId,
-                    question: {
-                        message,
-                        revisions: [],
-                        ratings: {
-                            votes: [],
-                        },
-                        user: {
-                            _id,
-                            name,
-                            avatar,
-                        },
-                    },
+                    question: questionResponse,
                     answers: [],
                 });
-                await question.save();
+                await Promise.all([questionResponse.save(), question.save()]);
                 getSocketIO()
                     .sockets.to(`project${projectId}`)
                     .emit('questions', {
@@ -82,7 +83,7 @@ export const questionsController: IConroller = {
             }
             const { questionId } = params;
             try {
-                const question = await questionModel.findById(questionId);
+                const question = await questionModel.findById(questionId).populate('question');
                 if (!question) {
                     throw new QuestionNotFoundException(questionId);
                 }

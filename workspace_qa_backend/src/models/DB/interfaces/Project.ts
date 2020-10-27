@@ -3,13 +3,6 @@ import { IQuestionDocumnet, IUserDocumnet } from '.';
 
 export interface IProject {
     name: string;
-    // users: Array<{
-    //     id: IUserDocumnet['_id'];
-    //     name: IUserDocumnet['name'];
-    //     avatar: IUserDocumnet['avatar'];
-    //     role: 'Owner' | 'Admin' | 'User' | 'Removed';
-    // }>;
-    // questions: Array<IQuestionDocumnet['_id']>;
     owner: IUserDocumnet['_id'];
     archived?: boolean;
 }

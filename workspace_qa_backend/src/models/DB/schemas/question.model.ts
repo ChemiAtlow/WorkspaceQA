@@ -3,57 +3,6 @@ import { Schema, model } from 'mongoose';
 import { IQuestionDocumnet, IQuestionModel } from '../interfaces';
 import { appLogger } from '../../../services';
 
-const commonResponse = {
-    message: {
-        type: String,
-        required: true,
-        trim: true,
-    },
-    edited: {
-        type: Boolean,
-        default: false,
-    },
-    revisions: [
-        {
-            type: String,
-            required: false,
-        },
-    ],
-    ratings: {
-        total: {
-            type: Number,
-            default: 0,
-        },
-        votes: [
-            {
-                user: {
-                    type: Schema.Types.ObjectId,
-                    ref: 'Users',
-                },
-                vote: {
-                    type: String,
-                    enum: ['up, down'],
-                },
-            },
-        ],
-    },
-    user: {
-        _id: {
-            ref: 'User',
-            type: Schema.Types.ObjectId,
-            required: true,
-        },
-        name: {
-            type: String,
-            required: true,
-        },
-        avatar: {
-            type: String,
-            required: true,
-        },
-    },
-};
-
 const questionSchema = new Schema<IQuestionDocumnet>(
     {
         title: {
@@ -75,8 +24,18 @@ const questionSchema = new Schema<IQuestionDocumnet>(
             enum: ['New', 'Answered', 'Accepted', 'Closed'],
             default: 'New',
         },
-        question: commonResponse,
-        answers: [commonResponse],
+        question: {
+            ref: 'Responses',
+            type: Schema.Types.ObjectId,
+            required: true,
+        },
+        answers: [
+            {
+                ref: 'Responses',
+                type: Schema.Types.ObjectId,
+                required: true,
+            },
+        ],
     },
     { toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );

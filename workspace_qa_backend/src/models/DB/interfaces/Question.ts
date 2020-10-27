@@ -1,14 +1,15 @@
 import { Document, Model } from 'mongoose';
 import { IResponse } from '.';
 import { IProjectDocumnet } from './Project';
+import { IResponseDocumnet } from './Response';
 
 export interface IQuestion {
     title: string;
     filePath: string;
     state: 'Initial' | 'Answered' | 'Accepted' | 'Closed';
     project: IProjectDocumnet['_id'];
-    question: IResponse;
-    answers: IResponse[];
+    question: IResponseDocumnet['_id'];
+    answers: IResponseDocumnet['_id'][];
     answerCount: number;
 }
 
