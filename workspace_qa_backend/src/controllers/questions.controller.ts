@@ -9,7 +9,7 @@ import {
 import { validationMiddleware } from '../middleware';
 import { questionModel, responseModel } from '../models/DB/schemas';
 import { CreateQuestionDto } from '../models/dtos';
-import { appLogger, getSocketIO } from '../services';
+import { appLogger, emitQuestionCreated, emitQuestionEditedAtProjectLevel } from '../services';
 
 export const questionsController: IConroller = {
     createQuestion: {
@@ -49,18 +49,12 @@ export const questionsController: IConroller = {
                     answers: [],
                 });
                 await Promise.all([questionResponse.save(), question.save()]);
-                getSocketIO()
-                    .sockets.to(`project${projectId}`)
-                    .emit('questions', {
-                        action: 'create',
-                        question: {
-                            _id: question._id,
-                            title,
-                            project: projectId,
-                            state: question.state,
-                            answerCount: question.answerCount,
-                        },
-                    });
+                emitQuestionCreated(projectId, {
+                    _id: question._id,
+                    title: title || '',
+                    state: question.state,
+                    answerCount: question.answerCount,
+                });
                 res.status(201).send({ question });
             } catch (err) {
                 appLogger.error(err.message);
@@ -89,7 +83,7 @@ export const questionsController: IConroller = {
                 }
                 res.send(question);
             } catch (err) {
-                appLogger.error(err);
+                appLogger.error(err.message);
                 if (err instanceof HttpException) {
                     throw err;
                 }
@@ -101,8 +95,48 @@ export const questionsController: IConroller = {
         path: '/:questionId',
         method: 'patch',
         authSafe: true,
-        controller: (req, res) => {
-            throw new HttpException(HTTPStatuses.notImplemented, 'Route not implemented!');
+        middleware: [validationMiddleware(CreateQuestionDto, true)],
+        controller: async (req, res) => {
+            const { user, projectId, params, body } = req;
+            if (user === undefined) {
+                throw new InternalServerException('An error happened with authentication');
+            }
+            const isUserFromProject = user.projects.some((prj) => prj._id.equals(projectId));
+            if (!isUserFromProject) {
+                throw new UnauthorizedException('You are not a part of this project!');
+            }
+            const { questionId } = params;
+            try {
+                const questionDoc = await questionModel.findById(questionId).populate('question');
+                if (!questionDoc) {
+                    throw new QuestionNotFoundException(questionId);
+                }
+                const isQuestionOwner = questionDoc.question.user._id.equals(user._id);
+                if (!isQuestionOwner) {
+                    throw new UnauthorizedException('You did not write this question!');
+                }
+                const { filePath, message, title: newTitle } = body as CreateQuestionDto;
+                if (message) {
+                    questionDoc.question.message = message;
+                    await responseModel
+                        .updateOne({ _id: questionDoc.question }, { message })
+                        .exec();
+                }
+                if (newTitle || filePath) {
+                    questionDoc.title = newTitle || questionDoc.title;
+                    questionDoc.filePath = filePath || questionDoc.filePath;
+                    await questionDoc.updateOne({ ...questionDoc.toObject() }).exec();
+                    const { _id, state, answerCount, title } = questionDoc;
+                    emitQuestionEditedAtProjectLevel(projectId, { title, _id, answerCount, state });
+                }
+                res.send(questionDoc);
+            } catch (err) {
+                appLogger.error(err.message);
+                if (err instanceof HttpException) {
+                    throw err;
+                }
+                throw new InternalServerException('An issue happened while editing question!');
+            }
         },
     },
     addAnswer: {
