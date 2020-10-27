@@ -1,6 +1,11 @@
 import { config as dotenvConfig } from 'dotenv';
 import { App } from './app';
-import { authController, projectsControllers, questionsController } from './controllers';
+import {
+    authController,
+    projectsControllers,
+    questionsController,
+    usersController,
+} from './controllers';
 import { Controller } from './controllers/controller.model';
 import { passportConfig } from './services';
 
@@ -15,6 +20,7 @@ const app = new App(
         new Controller('/auth', authController),
         new Controller('/projects', projectsControllers),
         new Controller('/questions/:projectId', questionsController),
+        new Controller('/users/:projectId', usersController),
     ],
     port
 );

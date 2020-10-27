@@ -140,8 +140,32 @@ export const questionsController: IConroller = {
         },
     },
     addAnswer: {
-        path: '/:questionId',
+        path: '/:questionId/answers',
+        method: 'post',
+        authSafe: true,
+        controller: (req, res) => {
+            throw new HttpException(HTTPStatuses.notImplemented, 'Route not implemented!');
+        },
+    },
+    editAnswer: {
+        path: '/:questionId/answers/:answerId',
         method: 'patch',
+        authSafe: true,
+        controller: (req, res) => {
+            throw new HttpException(HTTPStatuses.notImplemented, 'Route not implemented!');
+        },
+    },
+    rateResponse: {
+        path: '/rate/:responseId',
+        method: 'post',
+        authSafe: true,
+        controller: (req, res) => {
+            throw new HttpException(HTTPStatuses.notImplemented, 'Route not implemented!');
+        },
+    },
+    acceptAnswer: {
+        path: '/accept/:responseId',
+        method: 'post',
         authSafe: true,
         controller: (req, res) => {
             throw new HttpException(HTTPStatuses.notImplemented, 'Route not implemented!');
