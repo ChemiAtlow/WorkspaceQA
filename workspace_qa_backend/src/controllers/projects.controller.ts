@@ -20,11 +20,13 @@ export const projectsControllers: IConroller = {
             if (user === undefined) {
                 throw new InternalServerException('An error happened with authentication');
             }
-            const userProjects = await userModel
-                .findById(user._id, 'name username')
-                .populate('projects')
-                .exec();
-            res.send(userProjects);
+            await user.populate('projects').execPopulate();
+            res.send({
+                ...user.toObject(),
+                accessToken: undefined,
+                email: undefined,
+                githubId: undefined,
+            });
         },
     },
     createProject: {
