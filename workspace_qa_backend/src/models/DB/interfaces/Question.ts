@@ -1,5 +1,4 @@
 import { Document, Model } from 'mongoose';
-import { IResponse } from '.';
 import { IProjectDocumnet } from './Project';
 import { IResponseDocumnet } from './Response';
 
