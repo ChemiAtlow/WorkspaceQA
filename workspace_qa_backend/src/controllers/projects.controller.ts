@@ -129,7 +129,7 @@ export const projectsControllers: IConroller = {
                     .updateMany({ projects: project }, { $pullAll: { projects: [project] } })
                     .exec();
                 await Promise.all([projectUpdate, usersUpdate]);
-                emitProjectRemoved({ _id: projectId, name: project.name });
+                emitProjectRemoved({ _id: project._id, name: project.name });
                 res.send({ ...project.toObject(), archived: undefined });
             } catch (err) {
                 if (err instanceof HttpException) {
@@ -165,7 +165,7 @@ export const projectsControllers: IConroller = {
                     throw new UnauthorizedException('You are not thoe owner of this project');
                 }
                 await project.updateOne({ ...projectData }).exec();
-                emitProjectEdited({ _id: projectId, name: project.name });
+                emitProjectEdited({ _id: projectId, name: projectData.name! });
                 res.send({ ...project.toObject(), ...projectData });
             } catch (err) {
                 if (err instanceof HttpException) {

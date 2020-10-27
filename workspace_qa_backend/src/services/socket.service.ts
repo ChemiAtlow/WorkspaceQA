@@ -1,11 +1,30 @@
 import { Server as HttpServer } from 'http';
 import socketIO, { Server } from 'socket.io';
-import { ProjectUserLevel, QuestionProjectLevel } from '../models/interfaces';
+import {
+    ProjectUserLevel,
+    QuestionProjectLevel,
+    SocketSubscription,
+    SocketSubscriptionAddRemove,
+} from '../models/interfaces';
 
 let io: Server;
 
 export const initSocketIO = (server: HttpServer) => {
     io = socketIO(server);
+    io.on('connection', (socket) => {
+        socket.on('subscribe', (roomData: SocketSubscription) => {
+            socket.leaveAll();
+            const { user, projects } = roomData;
+            socket.join(`user${user}`);
+            projects.forEach((prj) => socket.join(`project${prj._id}`));
+        });
+        socket.on('subscribeMore', (roomData: SocketSubscriptionAddRemove) => {
+            socket.join(`${roomData.type}${roomData.id}`);
+        });
+        socket.on('subscribeLess', (roomData: SocketSubscriptionAddRemove) => {
+            socket.leave(`${roomData.type}${roomData.id}`);
+        });
+    });
     return io;
 };
 
@@ -26,7 +45,7 @@ const emitter = (
 
 export const emitProjectCreated = (userId: string, { name, _id }: ProjectUserLevel) => {
     emitter(`user${userId}`, 'projects', {
-        action: 'created',
+        action: 'create',
         project: { _id, name, owner: userId },
     });
 };

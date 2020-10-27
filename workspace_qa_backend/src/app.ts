@@ -7,8 +7,7 @@ import { initialize } from 'passport';
 
 import { Controller } from './controllers';
 import { errorMiddleware, notFoundMiddleware, paramMiddleware } from './middleware';
-import { appLogger, init, LogStream, mongoDBConnect } from './services';
-import { SocketSubscription } from './models/interfaces/SocketSubscription';
+import { appLogger, initSocketIO, LogStream, mongoDBConnect } from './services';
 
 export class App {
     public readonly app: Application;
@@ -57,13 +56,6 @@ export class App {
         const server = this.app.listen(this.port, () => {
             appLogger.debug(`Server started listening on the port ${this.port}`);
         });
-        init(server).on('connection', (socket) => {
-            socket.on('subscribe', (roomData: SocketSubscription) => {
-                socket.leaveAll();
-                const { user, projects } = roomData;
-                socket.join(`user${user}`);
-                projects.forEach((prj) => socket.join(`project${prj._id}`));
-            });
-        });
+        initSocketIO(server);
     }
 }
