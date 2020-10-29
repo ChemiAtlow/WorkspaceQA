@@ -1,13 +1,18 @@
-import {
-    HttpException,
-    InternalServerException,
-    ProjectNotFoundException,
-    UnauthorizedException,
-} from '../exceptions';
-import { validationMiddleware } from '../middleware';
+import { HttpException, InternalServerException, UnauthorizedException } from '../exceptions';
+import { userFromProjectMiddleware, validationMiddleware } from '../middleware';
 import { CreateProjectDto } from '../models/dtos';
-import { userModel, projectModel, questionModel } from '../models/DB/schemas';
-import { appLogger, emitProjectCreated, emitProjectEdited, emitProjectRemoved } from '../services';
+import {
+    appLogger,
+    createProject,
+    emitProjectCreated,
+    emitProjectEdited,
+    emitProjectRemoved,
+    getDataProjectLevel,
+    getProjectsOfUser,
+    isUserProjectOwner,
+    removeProject,
+    updateProject,
+} from '../services';
 import { IConroller } from '../models/interfaces';
 
 export const projectsControllers: IConroller = {
@@ -16,17 +21,15 @@ export const projectsControllers: IConroller = {
         method: 'get',
         authSafe: true,
         controller: async (req, res) => {
-            const { user } = req;
-            if (user === undefined) {
-                throw new InternalServerException('An error happened with authentication');
+            try {
+                res.send(await getProjectsOfUser(req.user!));
+            } catch (err) {
+                appLogger.error(err.message);
+                if (err instanceof HttpException) {
+                    throw err;
+                }
+                throw new InternalServerException('Issue reading users projects!');
             }
-            await user.populate('projects').execPopulate();
-            res.send({
-                ...user.toObject(),
-                accessToken: undefined,
-                email: undefined,
-                githubId: undefined,
-            });
         },
     },
     createProject: {
@@ -36,23 +39,14 @@ export const projectsControllers: IConroller = {
         middleware: [validationMiddleware(CreateProjectDto)],
         controller: async (req, res) => {
             const { body, user } = req;
-            if (user === undefined) {
-                throw new InternalServerException('An error happened with authentication');
-            }
-            const { _id: id } = user;
-            const projectData: CreateProjectDto = body;
+            const { _id: id } = user!;
             try {
-                const project = new projectModel({
-                    ...projectData,
-                    owner: user,
-                });
-                await project.save();
-                await user.updateOne({ $push: { projects: project } }).exec();
+                const project = await createProject(body, user!);
                 const { _id, name } = project;
                 emitProjectCreated(id, { _id, name });
                 res.status(201).send(project.toJSON());
-            } catch (error) {
-                appLogger.error(error.message);
+            } catch (err) {
+                appLogger.error(err.message);
                 throw new InternalServerException('Issue creating project!');
             }
         },
@@ -61,38 +55,14 @@ export const projectsControllers: IConroller = {
         path: '/:projectId',
         method: 'get',
         authSafe: true,
+        middleware: [userFromProjectMiddleware],
         controller: async (req, res) => {
-            const { user, params } = req;
-            if (user === undefined) {
-                throw new InternalServerException('An error happened with authentication');
-            }
-            const { projectId } = params;
-            const hasProject = user.projects.some((prj) => prj.equals(projectId));
-            if (!hasProject) {
-                throw new UnauthorizedException(
-                    'Your user is not connected to the requested project!'
-                );
-            }
+            const {
+                params: { projectId },
+            } = req;
             try {
-                const project = await projectModel
-                    .findOne({
-                        _id: projectId,
-                        archived: { $ne: true },
-                    })
-                    .exec();
-                const questionsFetch = questionModel
-                    .find({ project: { $eq: projectId } })
-                    .select('_id title state answers ratings.total')
-                    .exec();
-                const usersFetch = userModel
-                    .find({ projects: project })
-                    .select('_id avatar name username')
-                    .exec();
-                const [questions, users] = await Promise.all([questionsFetch, usersFetch]);
-                if (!project) {
-                    throw new ProjectNotFoundException(projectId);
-                }
-                res.send({ ...project.toObject(), questions, users });
+                const projectData = await getDataProjectLevel(projectId);
+                res.send(projectData);
             } catch (error) {
                 appLogger.error(error.message);
                 if (error instanceof HttpException) {
@@ -107,28 +77,16 @@ export const projectsControllers: IConroller = {
         method: 'delete',
         authSafe: true,
         controller: async (req, res) => {
-            const { user, params } = req;
-            if (user === undefined) {
-                throw new InternalServerException('An error happened with authentication');
-            }
-            const { projectId } = params;
+            const {
+                user,
+                params: { projectId },
+            } = req;
             try {
-                const project = await projectModel.findOne({
-                    _id: projectId,
-                    archived: { $ne: true },
-                });
+                const project = await isUserProjectOwner(projectId, user!);
                 if (!project) {
-                    throw new ProjectNotFoundException(projectId);
-                }
-                const isUserOwnerOfProject = user._id.equals(project.owner);
-                if (!isUserOwnerOfProject) {
                     throw new UnauthorizedException('You are not the owner of this project!');
                 }
-                const projectUpdate = project.updateOne({ archived: true });
-                const usersUpdate = userModel
-                    .updateMany({ projects: project }, { $pullAll: { projects: [project] } })
-                    .exec();
-                await Promise.all([projectUpdate, usersUpdate]);
+                await removeProject(project);
                 emitProjectRemoved({ _id: project._id, name: project.name });
                 res.send({ ...project.toObject(), archived: undefined });
             } catch (err) {
@@ -144,29 +102,21 @@ export const projectsControllers: IConroller = {
         path: '/:projectId',
         method: 'patch',
         authSafe: true,
-        middleware: [validationMiddleware(CreateProjectDto)],
+        middleware: [userFromProjectMiddleware, validationMiddleware(CreateProjectDto)],
         controller: async (req, res) => {
-            const { body, user, params } = req;
-            if (user === undefined) {
-                throw new InternalServerException('An error happened with authentication');
-            }
-            const projectData: CreateProjectDto = body;
-            const { projectId } = params;
+            const {
+                body,
+                user,
+                params: { projectId },
+            } = req;
             try {
-                const project = await projectModel.findOne({
-                    _id: projectId,
-                    archived: { $ne: true },
-                });
+                const project = await isUserProjectOwner(projectId, user!);
                 if (!project) {
-                    throw new ProjectNotFoundException(projectId);
+                    throw new UnauthorizedException('You are not the owner of this project!');
                 }
-                const isUserOwnerOfProject = user._id.equals(project.owner);
-                if (!isUserOwnerOfProject) {
-                    throw new UnauthorizedException('You are not thoe owner of this project');
-                }
-                await project.updateOne({ ...projectData }).exec();
-                emitProjectEdited({ _id: projectId, name: projectData.name! });
-                res.send({ ...project.toObject(), ...projectData });
+                await updateProject(body, project);
+                emitProjectEdited({ _id: projectId, name: body.name });
+                res.send({ ...project.toObject(), name: body.namr });
             } catch (err) {
                 if (err instanceof HttpException) {
                     throw err;
