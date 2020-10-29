@@ -5,15 +5,21 @@ export { passportConfig } from './passport.service';
 export {
     mongoDBConnect,
     isUserFromProject,
+    isUserProjectOwner,
     isUserResponseOwner,
+    createProject,
     createResponse,
     createQuestion,
+    getProjectsOfUser,
+    getDataProjectLevel,
     getQuestion,
     getAnswer,
     getAnswers,
+    updateProject,
     updateResponse,
     updateQuestion,
     addAnswerToQuestion,
+    removeProject,
 } from './mongo.service';
 export {
     initSocketIO,

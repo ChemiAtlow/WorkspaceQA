@@ -1,8 +1,12 @@
 import { connect } from 'mongoose';
-import { AnswerNotFoundException, QuestionNotFoundException } from '../exceptions';
-import { IQuestionDocumnet, IResponseDocumnet } from '../models/DB/interfaces';
-import { questionModel, responseModel } from '../models/DB/schemas';
-import { CreateQuestionDto, ResponseDto } from '../models/dtos';
+import {
+    AnswerNotFoundException,
+    ProjectNotFoundException,
+    QuestionNotFoundException,
+} from '../exceptions';
+import { IProjectDocumnet, IQuestionDocumnet, IResponseDocumnet } from '../models/DB/interfaces';
+import { projectModel, questionModel, responseModel, userModel } from '../models/DB/schemas';
+import { CreateProjectDto, CreateQuestionDto, ResponseDto } from '../models/dtos';
 import { appLogger } from './appLogger.service';
 
 export const mongoDBConnect = async () => {
@@ -22,8 +26,26 @@ export const mongoDBConnect = async () => {
 export const isUserFromProject = ({ projects }: Express.User, projectId: string) =>
     projects.some((prj) => prj._id.equals(projectId));
 
+export const isUserProjectOwner = async (projectId: string, { _id }: Express.User) => {
+    const project = await projectModel.findOne({
+        _id: projectId,
+        archived: { $ne: true },
+    });
+    if (!project) {
+        throw new ProjectNotFoundException(projectId);
+    }
+    return _id.equals(project.owner) ? project : false;
+};
+
 export const isUserResponseOwner = ({ user }: IResponseDocumnet, { _id }: Express.User) =>
     user._id.equals(_id) as boolean;
+
+export const createProject = async (data: CreateProjectDto, owner: Express.User) => {
+    const project = new projectModel({ ...data, owner });
+    const userUpdate = owner.updateOne({ $push: { projects: project } }).exec();
+    await Promise.all([project.save(), userUpdate]);
+    return project;
+};
 
 export const createResponse = ({ message }: ResponseDto, { _id, name, avatar }: Express.User) => {
     const response = new responseModel({
@@ -56,6 +78,28 @@ export const createQuestion = (
     return question;
 };
 
+export const getProjectsOfUser = async (user: Express.User) => {
+    await user.populate('projects').execPopulate();
+    return { ...user.toObject(), accessToken: undefined, email: undefined, githubId: undefined };
+};
+
+export const getDataProjectLevel = async (projectId: string) => {
+    const project = await projectModel.findOne({ _id: projectId, archived: { $ne: true } }).exec();
+    if (!project) {
+        throw new ProjectNotFoundException(projectId);
+    }
+    const questionsFetch = questionModel
+        .find({ project: { $eq: projectId } })
+        .select('_id title state answers ratings.total')
+        .exec();
+    const usersFetch = userModel
+        .find({ projects: project })
+        .select('_id avatar name username')
+        .exec();
+    const [questions, users] = await Promise.all([questionsFetch, usersFetch]);
+    return { ...project.toObject(), questions, users };
+};
+
 export const getQuestion = async (questionId: string) => {
     const questionDoc = await questionModel.findById(questionId).populate('question').exec();
     if (!questionDoc) {
@@ -83,6 +127,9 @@ export const getAnswers = async (questionId: string) => {
     }
     return questionDoc.answers;
 };
+
+export const updateProject = async (data: CreateProjectDto, project: IProjectDocumnet) =>
+    await project.updateOne({ ...data }).exec();
 
 export const updateResponse = async (response: IResponseDocumnet, { message }: ResponseDto) => {
     const oldMsg = response.message;
@@ -113,4 +160,12 @@ export const addAnswerToQuestion = async (questionId: string, answerDoc: IRespon
     const questionFetch = getQuestion(questionId);
     const [answer, question] = await Promise.all([answerDoc.save(), questionFetch]);
     await question.updateOne({ $push: { answers: answer } }).exec();
+};
+
+export const removeProject = async (project: IProjectDocumnet) => {
+    const projectUpdate = project.updateOne({ archived: true });
+    const usersUpdate = userModel
+        .updateMany({ projects: project }, { $pullAll: { projects: [project] } })
+        .exec();
+    await Promise.all([projectUpdate, usersUpdate]);
 };
