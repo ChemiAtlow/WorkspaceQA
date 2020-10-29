@@ -1,6 +1,6 @@
 import { HTTPStatuses } from '../constants';
 import { HttpException, InternalServerException, UnauthorizedException } from '../exceptions';
-import { validationMiddleware } from '../middleware';
+import { userFromProjectMiddleware, validationMiddleware } from '../middleware';
 import { CreateQuestionDto, ResponseDto } from '../models/dtos';
 import { IConroller } from '../models/interfaces';
 import {
@@ -24,17 +24,11 @@ export const questionsController: IConroller = {
         path: '/',
         method: 'post',
         authSafe: true,
-        middleware: [validationMiddleware(CreateQuestionDto)],
+        middleware: [userFromProjectMiddleware, validationMiddleware(CreateQuestionDto)],
         controller: async (req, res) => {
             const { body, user, projectId } = req;
-            if (user === undefined) {
-                throw new InternalServerException('An error happened with authentication');
-            }
-            if (!isUserFromProject(user, projectId)) {
-                throw new UnauthorizedException('You are not a part of this project!');
-            }
             try {
-                const questionResponse = createResponse(body, user);
+                const questionResponse = createResponse(body, user!);
                 const question = createQuestion(projectId, body, questionResponse);
                 await Promise.all([questionResponse.save(), question.save()]);
                 emitQuestionCreated(projectId, {
@@ -54,18 +48,11 @@ export const questionsController: IConroller = {
         path: '/:questionId',
         method: 'get',
         authSafe: true,
+        middleware: [userFromProjectMiddleware],
         controller: async (req, res) => {
             const {
-                user,
-                projectId,
                 params: { questionId },
             } = req;
-            if (user === undefined) {
-                throw new InternalServerException('An error happened with authentication');
-            }
-            if (!isUserFromProject(user, projectId)) {
-                throw new UnauthorizedException('You are not a part of this project!');
-            }
             try {
                 const question = await getQuestion(questionId);
                 res.send(question);
@@ -82,7 +69,7 @@ export const questionsController: IConroller = {
         path: '/:questionId',
         method: 'patch',
         authSafe: true,
-        middleware: [validationMiddleware(CreateQuestionDto, true)],
+        middleware: [userFromProjectMiddleware, validationMiddleware(CreateQuestionDto, true)],
         controller: async (req, res) => {
             const {
                 user,
@@ -90,15 +77,9 @@ export const questionsController: IConroller = {
                 params: { questionId },
                 body,
             } = req;
-            if (user === undefined) {
-                throw new InternalServerException('An error happened with authentication');
-            }
-            if (!isUserFromProject(user, projectId)) {
-                throw new UnauthorizedException('You are not a part of this project!');
-            }
             try {
                 const questionDoc = await getQuestion(questionId);
-                if (!isUserResponseOwner(questionDoc.question, user)) {
+                if (!isUserResponseOwner(questionDoc.question, user!)) {
                     throw new UnauthorizedException('You did not write this question!');
                 }
                 await updateQuestion(body, questionDoc);
@@ -123,42 +104,36 @@ export const questionsController: IConroller = {
         path: '/:questionId/answers',
         method: 'get',
         authSafe: true,
+        middleware: [userFromProjectMiddleware],
         controller: async (req, res) => {
             const {
-                user,
-                projectId,
                 params: { questionId },
             } = req;
-            if (user === undefined) {
-                throw new InternalServerException('An error happened with authentication');
+            try {
+                const answers = await getAnswers(questionId);
+                res.send(answers);
+            } catch (err) {
+                appLogger.error(err.message);
+                if (err instanceof HttpException) {
+                    throw err;
+                }
+                throw new InternalServerException('Unknown issue finding answers!');
             }
-            if (!isUserFromProject(user, projectId)) {
-                throw new UnauthorizedException('You are not a part of this project!');
-            }
-            const answers = await getAnswers(questionId);
-            res.send(answers);
         },
     },
     addAnswer: {
         path: '/:questionId/answers',
         method: 'post',
         authSafe: true,
-        middleware: [validationMiddleware(ResponseDto)],
+        middleware: [userFromProjectMiddleware, validationMiddleware(ResponseDto)],
         controller: async (req, res) => {
             const {
                 body,
                 user,
-                projectId,
                 params: { questionId },
             } = req;
-            if (user === undefined) {
-                throw new InternalServerException('An error happened with authentication');
-            }
-            if (!isUserFromProject(user, projectId)) {
-                throw new UnauthorizedException('You are not a part of this project!');
-            }
             try {
-                const answer = createResponse(body, user);
+                const answer = createResponse(body, user!);
                 await addAnswerToQuestion(questionId, answer);
                 //TODO: Emit data at question level, and at project level (answeCount)
                 res.send(answer);
@@ -175,22 +150,18 @@ export const questionsController: IConroller = {
         path: '/:questionId/answers/:answerId',
         method: 'patch',
         authSafe: true,
-        middleware: [validationMiddleware(ResponseDto)],
+        middleware: [userFromProjectMiddleware, validationMiddleware(ResponseDto)],
         controller: async (req, res) => {
             const {
                 body,
                 user,
-                projectId,
-                params: { questionId, answerId },
+                params: { answerId },
             } = req;
-            if (user === undefined) {
-                throw new InternalServerException('An error happened with authentication');
-            }
-            if (!isUserFromProject(user, projectId)) {
-                throw new UnauthorizedException('You are not a part of this project!');
-            }
             try {
                 const answer = await getAnswer(answerId);
+                if (!isUserResponseOwner(answer, user!)) {
+                    throw new UnauthorizedException('This is not your answer!');
+                }
                 const edited = await updateResponse(answer, body);
                 res.send(edited);
             } catch (err) {
