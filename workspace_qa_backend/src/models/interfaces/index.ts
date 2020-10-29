@@ -10,3 +10,4 @@ export { SocketSubscription, SocketSubscriptionAddRemove } from './SocketSubscri
 export { QuestionProjectLevel, ProjectUserLevel } from './SocketEmitting';
 export { Endpoint } from './Endpoint';
 export { IConroller } from './Controller';
+export { Rating } from './Rating';
