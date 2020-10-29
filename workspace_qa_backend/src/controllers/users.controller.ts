@@ -1,6 +1,6 @@
 import { HTTPStatuses } from '../constants';
 import { HttpException } from '../exceptions';
-import { IConroller } from './controller.model';
+import { IConroller } from '../models/interfaces';
 
 export const usersController: IConroller = {
     inviteUser: {

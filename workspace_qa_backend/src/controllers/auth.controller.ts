@@ -1,7 +1,7 @@
 import { userModel } from '../models/DB/schemas';
 import { createJWTToken, getUserDataFromCallback, isValidJWTToken } from '../services';
-import { IConroller } from '.';
 import { BadRequestException } from '../exceptions';
+import { IConroller } from '../models/interfaces';
 
 export const authController: IConroller = {
     githubOauth: {

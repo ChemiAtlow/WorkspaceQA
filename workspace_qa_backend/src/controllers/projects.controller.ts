@@ -1,4 +1,3 @@
-import { IConroller } from '.';
 import {
     HttpException,
     InternalServerException,
@@ -9,6 +8,7 @@ import { validationMiddleware } from '../middleware';
 import { CreateProjectDto } from '../models/dtos';
 import { userModel, projectModel, questionModel } from '../models/DB/schemas';
 import { appLogger, emitProjectCreated, emitProjectEdited, emitProjectRemoved } from '../services';
+import { IConroller } from '../models/interfaces';
 
 export const projectsControllers: IConroller = {
     getUsersProject: {

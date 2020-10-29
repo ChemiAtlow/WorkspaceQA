@@ -1,21 +1,10 @@
 import { NextFunction, Request, RequestHandler, Response, Router } from 'express';
 import { authenticate } from 'passport';
+import { IConroller } from '../models/interfaces';
 
 type AsyncEndpointWrapper = (
     fn: RequestHandler<any>
 ) => (req: Request, res: Response, next: NextFunction) => Promise<any>;
-
-export type Endpoint = {
-    path: string;
-    method: 'all' | 'get' | 'post' | 'put' | 'delete' | 'patch' | 'options' | 'head' | 'use';
-    authSafe?: boolean;
-    middleware?: RequestHandler<any>[];
-    controller: RequestHandler<any>;
-};
-
-export interface IConroller {
-    [controllers: string]: Endpoint;
-}
 
 export class Controller {
     public readonly router = Router();

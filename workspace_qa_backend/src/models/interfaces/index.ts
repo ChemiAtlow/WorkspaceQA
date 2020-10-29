@@ -8,3 +8,5 @@ export {
 } from './GithubResponse';
 export { SocketSubscription, SocketSubscriptionAddRemove } from './SocketSubscription';
 export { QuestionProjectLevel, ProjectUserLevel } from './SocketEmitting';
+export { Endpoint } from './Endpoint';
+export { IConroller } from './Controller';
