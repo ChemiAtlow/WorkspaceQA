@@ -1,7 +1,7 @@
 import { HTTPStatuses } from '../constants';
 import { HttpException, InternalServerException, UnauthorizedException } from '../exceptions';
 import { userFromProjectMiddleware, validationMiddleware } from '../middleware';
-import { CreateQuestionDto, ResponseDto } from '../models/dtos';
+import { CreateQuestionDto, RateDto, ResponseDto } from '../models/dtos';
 import { IConroller } from '../models/interfaces';
 import {
     addAnswerToQuestion,
@@ -10,10 +10,9 @@ import {
     createResponse,
     emitQuestionCreated,
     emitQuestionEditedAtProjectLevel,
-    getAnswer,
+    getResponse,
     getAnswers,
     getQuestion,
-    isUserFromProject,
     isUserResponseOwner,
     updateQuestion,
     updateResponse,
@@ -158,7 +157,7 @@ export const questionsController: IConroller = {
                 params: { answerId },
             } = req;
             try {
-                const answer = await getAnswer(answerId);
+                const answer = await getResponse(answerId);
                 if (!isUserResponseOwner(answer, user!)) {
                     throw new UnauthorizedException('This is not your answer!');
                 }
@@ -177,6 +176,7 @@ export const questionsController: IConroller = {
         path: '/rate/:responseId',
         method: 'post',
         authSafe: true,
+        middleware: [userFromProjectMiddleware, validationMiddleware(RateDto)],
         controller: (req, res) => {
             throw new HttpException(HTTPStatuses.notImplemented, 'Route not implemented!');
         },

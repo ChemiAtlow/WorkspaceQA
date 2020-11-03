@@ -13,7 +13,7 @@ export {
     getProjectsOfUser,
     getDataProjectLevel,
     getQuestion,
-    getAnswer,
+    getResponse,
     getAnswers,
     updateProject,
     updateResponse,

@@ -6,7 +6,7 @@ import {
 } from '../exceptions';
 import { IProjectDocumnet, IQuestionDocumnet, IResponseDocumnet } from '../models/DB/interfaces';
 import { projectModel, questionModel, responseModel, userModel } from '../models/DB/schemas';
-import { CreateProjectDto, CreateQuestionDto, ResponseDto } from '../models/dtos';
+import { CreateProjectDto, CreateQuestionDto, RateDto, ResponseDto } from '../models/dtos';
 import { appLogger } from './appLogger.service';
 
 export const mongoDBConnect = async () => {
@@ -90,7 +90,8 @@ export const getDataProjectLevel = async (projectId: string) => {
     }
     const questionsFetch = questionModel
         .find({ project: { $eq: projectId } })
-        .select('_id title state answers ratings.total')
+        .populate('question', 'ratings.total')
+        .select('_id title state answers')
         .exec();
     const usersFetch = userModel
         .find({ projects: project })
@@ -108,10 +109,10 @@ export const getQuestion = async (questionId: string) => {
     return questionDoc;
 };
 
-export const getAnswer = async (answerId: string) => {
-    const answer = await responseModel.findById(answerId).exec();
+export const getResponse = async (responseId: string) => {
+    const answer = await responseModel.findById(responseId).exec();
     if (!answer) {
-        throw new AnswerNotFoundException(answerId);
+        throw new AnswerNotFoundException(responseId);
     }
     return answer;
 };
@@ -169,3 +170,5 @@ export const removeProject = async (project: IProjectDocumnet) => {
         .exec();
     await Promise.all([projectUpdate, usersUpdate]);
 };
+
+export const rateResponse = (response: IResponseDocumnet, ratingData: RateDto) => {};
