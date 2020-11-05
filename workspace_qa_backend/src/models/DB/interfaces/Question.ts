@@ -10,6 +10,7 @@ export interface IQuestion {
     question: IResponseDocumnet['_id'];
     answers: IResponseDocumnet['_id'][];
     answerCount: number;
+    acceptedAnswer?: IResponseDocumnet['_id'];
 }
 
 //Methods - if needed.

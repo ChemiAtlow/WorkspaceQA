@@ -36,6 +36,10 @@ const questionSchema = new Schema<IQuestionDocumnet>(
                 required: true,
             },
         ],
+        acceptedAnswer: {
+            ref: 'Responses',
+            type: Schema.Types.ObjectId,
+        },
     },
     { toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
