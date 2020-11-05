@@ -7,6 +7,7 @@ import {
 import { IProjectDocumnet, IQuestionDocumnet, IResponseDocumnet } from '../models/DB/interfaces';
 import { projectModel, questionModel, responseModel, userModel } from '../models/DB/schemas';
 import { CreateProjectDto, CreateQuestionDto, RateDto, ResponseDto } from '../models/dtos';
+import { Rating } from '../models/interfaces';
 import { appLogger } from './appLogger.service';
 
 export const mongoDBConnect = async () => {
@@ -171,4 +172,28 @@ export const removeProject = async (project: IProjectDocumnet) => {
     await Promise.all([projectUpdate, usersUpdate]);
 };
 
-export const rateResponse = (response: IResponseDocumnet, ratingData: RateDto) => {};
+export const rateResponse = async (
+    response: IResponseDocumnet,
+    { rating }: RateDto,
+    user: Express.User
+) => {
+    let currentRating = response.ratings.total || 0;
+    if (rating === Rating.cancel) {
+        const oldVote = response.ratings.votes.find((vote) => vote.user.equals(user._id));
+        if (!oldVote) {
+            return;
+        }
+        currentRating = oldVote.vote === 'up' ? currentRating - 1 : currentRating + 1;
+        response.updateOne({});
+    } else {
+        if (rating === Rating.up) {
+            currentRating++;
+        } else if (rating === Rating.down) {
+            currentRating--;
+        }
+        const vote = { user, vote: rating };
+        await response
+            .updateOne({ ratings: { total: currentRating, $push: { votes: vote } } })
+            .exec();
+    }
+};

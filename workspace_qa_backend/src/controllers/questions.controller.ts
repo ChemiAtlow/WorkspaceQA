@@ -16,6 +16,7 @@ import {
     isUserResponseOwner,
     updateQuestion,
     updateResponse,
+    rateResponse,
 } from '../services';
 
 export const questionsController: IConroller = {
@@ -177,8 +178,28 @@ export const questionsController: IConroller = {
         method: 'post',
         authSafe: true,
         middleware: [userFromProjectMiddleware, validationMiddleware(RateDto)],
-        controller: (req, res) => {
-            throw new HttpException(HTTPStatuses.notImplemented, 'Route not implemented!');
+        controller: async (req, res) => {
+            const {
+                body,
+                user,
+                params: { responseId },
+            } = req;
+            try {
+                const responseDoc = await getResponse(responseId);
+                if (isUserResponseOwner(responseDoc, user!)) {
+                    throw new UnauthorizedException(
+                        'You cannot rate your own question / answer :)'
+                    );
+                }
+                await rateResponse(responseDoc, body, user!);
+                res.send({ msg: 'Rating success' });
+            } catch (err) {
+                appLogger.error(err.message);
+                if (err instanceof HttpException) {
+                    throw err;
+                }
+                throw new InternalServerException('Unknown issue when rating question/answer!');
+            }
         },
     },
     acceptAnswer: {

@@ -20,6 +20,7 @@ export {
     updateQuestion,
     addAnswerToQuestion,
     removeProject,
+    rateResponse,
 } from './mongo.service';
 export {
     initSocketIO,
