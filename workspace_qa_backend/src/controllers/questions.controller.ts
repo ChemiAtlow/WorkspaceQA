@@ -17,6 +17,7 @@ import {
     updateQuestion,
     updateResponse,
     rateResponse,
+    acceptAnswer,
 } from '../services';
 
 export const questionsController: IConroller = {
@@ -203,11 +204,30 @@ export const questionsController: IConroller = {
         },
     },
     acceptAnswer: {
-        path: '/accept/:responseId',
+        path: '/:questionId/answers/accept/:responseId',
         method: 'post',
         authSafe: true,
-        controller: (req, res) => {
-            throw new HttpException(HTTPStatuses.notImplemented, 'Route not implemented!');
+        middleware: [userFromProjectMiddleware],
+        controller: async (req, res) => {
+            const {
+                user,
+                params: { questionId, responseId },
+            } = req;
+            try {
+                const questionDoc = await getQuestion(questionId);
+                if (!isUserResponseOwner(questionDoc.question, user!)) {
+                    throw new UnauthorizedException('You did not write this question!');
+                }
+                const responseDoc = await getResponse(responseId);
+                await acceptAnswer(questionDoc, responseDoc);
+                res.send('Answer was accepted!');
+            } catch (err) {
+                appLogger.error(err.message);
+                if (err instanceof HttpException) {
+                    throw err;
+                }
+                throw new InternalServerException('Unknown issue with marking accepted answer!');
+            }
         },
     },
 };

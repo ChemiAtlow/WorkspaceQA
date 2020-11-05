@@ -21,6 +21,7 @@ export {
     addAnswerToQuestion,
     removeProject,
     rateResponse,
+    acceptAnswer,
 } from './mongo.service';
 export {
     initSocketIO,

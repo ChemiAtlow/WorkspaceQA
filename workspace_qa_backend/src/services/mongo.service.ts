@@ -162,11 +162,11 @@ export const updateQuestion = async (
 export const addAnswerToQuestion = async (questionId: string, answerDoc: IResponseDocumnet) => {
     const questionFetch = getQuestion(questionId);
     const [answer, question] = await Promise.all([answerDoc.save(), questionFetch]);
-    await question.updateOne({ $push: { answers: answer } }).exec();
+    await question.updateOne({ $push: { answers: answer }, state: 'Answered' }).exec();
 };
 
 export const removeProject = async (project: IProjectDocumnet) => {
-    const projectUpdate = project.updateOne({ archived: true });
+    const projectUpdate = project.updateOne({ archived: true }).exec();
     const usersUpdate = userModel
         .updateMany({ projects: project }, { $pullAll: { projects: [project] } })
         .exec();
@@ -205,4 +205,8 @@ export const rateResponse = async (
         currentRating += valueToAddToTotal;
     }
     await response.updateOne({ ...updateQuery, 'ratings.total': currentRating }).exec();
+};
+
+export const acceptAnswer = async (question: IQuestionDocumnet, answer: IResponseDocumnet) => {
+    await question.updateOne({ acceptedAnswer: answer, state: 'Accepted' }).exec();
 };
