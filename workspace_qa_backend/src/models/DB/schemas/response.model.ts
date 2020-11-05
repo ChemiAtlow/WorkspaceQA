@@ -31,7 +31,7 @@ const responseSchema = new Schema<IResponseDocumnet>({
                 },
                 vote: {
                     type: String,
-                    enum: ['up, down'],
+                    enum: ['up', 'down'],
                 },
             },
         ],
