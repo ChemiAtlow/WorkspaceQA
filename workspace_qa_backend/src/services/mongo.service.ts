@@ -178,28 +178,31 @@ export const rateResponse = async (
     { rating }: RateDto,
     user: Express.User
 ) => {
-    let currentRating = response.ratings.total || 0;
-    const oldVote = response.ratings.votes.find((vote) => vote.user.equals(user._id));
+    const { total, votes } = response.ratings;
+    let currentRating = total || 0;
+    const oldVoteIndex = votes.findIndex((vote) => vote.user.equals(user._id));
+    const oldVote = votes[oldVoteIndex];
+    let updateQuery: object;
     if (rating === Rating.cancel) {
         if (!oldVote) {
             throw new BadRequestException("You can't unvote a response you never voted.");
         }
         currentRating = oldVote.vote === 'up' ? currentRating - 1 : currentRating + 1;
-        await response
-            .updateOne({ $pull: { 'ratings.votes': oldVote }, 'ratings.total': currentRating })
-            .exec();
+        updateQuery = { $pull: { 'ratings.votes': oldVote } };
     } else {
-        if (oldVote) {
-            throw new BadRequestException("You can't vote a response you've already voted.");
-        }
-        if (rating === Rating.up) {
-            currentRating++;
-        } else if (rating === Rating.down) {
-            currentRating--;
-        }
         const vote = { user: user, vote: rating };
-        await response
-            .updateOne({ $push: { 'ratings.votes': vote }, 'ratings.total': currentRating })
-            .exec();
+        updateQuery = { $push: { 'ratings.votes': vote } };
+        let valueToAddToTotal = 0;
+        if (oldVote?.vote === rating) {
+            return;
+        } else {
+            valueToAddToTotal = rating === Rating.up ? 1 : -1;
+        }
+        if (oldVote) {
+            valueToAddToTotal *= 2;
+            updateQuery = { $set: { [`ratings.votes.${oldVoteIndex}`]: vote } };
+        }
+        currentRating += valueToAddToTotal;
     }
+    await response.updateOne({ ...updateQuery, 'ratings.total': currentRating }).exec();
 };
