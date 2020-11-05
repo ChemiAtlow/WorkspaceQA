@@ -1,6 +1,7 @@
 import { connect } from 'mongoose';
 import {
     AnswerNotFoundException,
+    BadRequestException,
     ProjectNotFoundException,
     QuestionNotFoundException,
 } from '../exceptions';
@@ -178,22 +179,27 @@ export const rateResponse = async (
     user: Express.User
 ) => {
     let currentRating = response.ratings.total || 0;
+    const oldVote = response.ratings.votes.find((vote) => vote.user.equals(user._id));
     if (rating === Rating.cancel) {
-        const oldVote = response.ratings.votes.find((vote) => vote.user.equals(user._id));
         if (!oldVote) {
-            return;
+            throw new BadRequestException("You can't unvote a response you never voted.");
         }
         currentRating = oldVote.vote === 'up' ? currentRating - 1 : currentRating + 1;
-        response.updateOne({});
+        await response
+            .updateOne({ $pull: { 'ratings.votes': oldVote }, 'ratings.total': currentRating })
+            .exec();
     } else {
+        if (oldVote) {
+            throw new BadRequestException("You can't vote a response you've already voted.");
+        }
         if (rating === Rating.up) {
             currentRating++;
         } else if (rating === Rating.down) {
             currentRating--;
         }
-        const vote = { user, vote: rating };
+        const vote = { user: user, vote: rating };
         await response
-            .updateOne({ ratings: { total: currentRating, $push: { votes: vote } } })
+            .updateOne({ $push: { 'ratings.votes': vote }, 'ratings.total': currentRating })
             .exec();
     }
 };
