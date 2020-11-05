@@ -3,6 +3,6 @@ import { HttpException } from './HttpException';
 
 export class QuestionNotFoundException extends HttpException {
     constructor(id: string) {
-        super(HTTPStatuses.notFound, `requested user (${id}) was not found!`);
+        super(HTTPStatuses.notFound, `requested question (${id}) was not found!`);
     }
 }
