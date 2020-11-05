@@ -1,5 +1,5 @@
 export enum Rating {
     up = 'up',
-    down = 'Down',
+    down = 'down',
     cancel = 'Cancel',
 }
