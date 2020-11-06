@@ -23,7 +23,7 @@ export const authController: IConroller = {
                 avatar,
                 email,
                 githubId,
-                name,
+                name: name || username,
                 username,
                 projects: [],
             });
