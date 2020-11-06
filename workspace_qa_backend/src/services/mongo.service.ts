@@ -1,12 +1,13 @@
 import { connect } from 'mongoose';
-import {
-    AnswerNotFoundException,
-    BadRequestException,
-    ProjectNotFoundException,
-    QuestionNotFoundException,
-} from '../exceptions';
+import { BadRequestException, ItemNotFoundException } from '../exceptions';
 import { IProjectDocumnet, IQuestionDocumnet, IResponseDocumnet } from '../models/DB/interfaces';
-import { projectModel, questionModel, responseModel, userModel } from '../models/DB/schemas';
+import {
+    projectModel,
+    questionModel,
+    responseModel,
+    userModel,
+    ratingModel,
+} from '../models/DB/schemas';
 import { CreateProjectDto, CreateQuestionDto, RateDto, ResponseDto } from '../models/dtos';
 import { Rating } from '../models/interfaces';
 import { appLogger } from './appLogger.service';
@@ -34,7 +35,7 @@ export const isUserProjectOwner = async (projectId: string, { _id }: Express.Use
         archived: { $ne: true },
     });
     if (!project) {
-        throw new ProjectNotFoundException(projectId);
+        throw new ItemNotFoundException('project', projectId);
     }
     return _id.equals(project.owner) ? project : false;
 };
@@ -53,9 +54,6 @@ export const createResponse = ({ message }: ResponseDto, { _id, name, avatar }: 
     const response = new responseModel({
         message,
         revisions: [],
-        ratings: {
-            votes: [],
-        },
         user: {
             _id,
             name,
@@ -80,6 +78,10 @@ export const createQuestion = (
     return question;
 };
 
+export const createRating = (rating: Rating, response: IResponseDocumnet, user: Express.User) => {
+    return new ratingModel({ user, response, vote: rating });
+};
+
 export const getProjectsOfUser = async (user: Express.User) => {
     await user.populate('projects').execPopulate();
     return { ...user.toObject(), accessToken: undefined, email: undefined, githubId: undefined };
@@ -88,11 +90,11 @@ export const getProjectsOfUser = async (user: Express.User) => {
 export const getDataProjectLevel = async (projectId: string) => {
     const project = await projectModel.findOne({ _id: projectId, archived: { $ne: true } }).exec();
     if (!project) {
-        throw new ProjectNotFoundException(projectId);
+        throw new ItemNotFoundException('project', projectId);
     }
     const questionsFetch = questionModel
         .find({ project: { $eq: projectId } })
-        .populate('question', 'ratings.total')
+        .populate('question', 'rating')
         .select('_id title state answers')
         .exec();
     const usersFetch = userModel
@@ -106,7 +108,7 @@ export const getDataProjectLevel = async (projectId: string) => {
 export const getQuestion = async (questionId: string) => {
     const questionDoc = await questionModel.findById(questionId).populate('question').exec();
     if (!questionDoc) {
-        throw new QuestionNotFoundException(questionId);
+        throw new ItemNotFoundException('question', questionId);
     }
     return questionDoc;
 };
@@ -114,7 +116,7 @@ export const getQuestion = async (questionId: string) => {
 export const getResponse = async (responseId: string) => {
     const answer = await responseModel.findById(responseId).exec();
     if (!answer) {
-        throw new AnswerNotFoundException(responseId);
+        throw new ItemNotFoundException('answer', responseId);
     }
     return answer;
 };
@@ -126,9 +128,14 @@ export const getAnswers = async (questionId: string) => {
         .populate('answers')
         .exec();
     if (!questionDoc) {
-        throw new QuestionNotFoundException(questionId);
+        throw new ItemNotFoundException('question', questionId);
     }
     return questionDoc.answers;
+};
+
+export const getRatingByRater = async ({ _id }: Express.User) => {
+    const rating = await ratingModel.findOne({ user: _id }).exec();
+    return rating;
 };
 
 export const updateProject = async (data: CreateProjectDto, project: IProjectDocumnet) =>
@@ -178,20 +185,16 @@ export const rateResponse = async (
     { rating }: RateDto,
     user: Express.User
 ) => {
-    const { total, votes } = response.ratings;
-    let currentRating = total || 0;
-    const oldVoteIndex = votes.findIndex((vote) => vote.user.equals(user._id));
-    const oldVote = votes[oldVoteIndex];
-    let updateQuery: object;
+    let currentRating = response.rating || 0;
+    let ratingPromise: Promise<any>;
+    const oldVote = await getRatingByRater(user);
     if (rating === Rating.cancel) {
         if (!oldVote) {
             throw new BadRequestException("You can't unvote a response you never voted.");
         }
+        ratingPromise = ratingModel.deleteOne(oldVote).exec();
         currentRating = oldVote.vote === 'up' ? currentRating - 1 : currentRating + 1;
-        updateQuery = { $pull: { 'ratings.votes': oldVote } };
     } else {
-        const vote = { user: user, vote: rating };
-        updateQuery = { $push: { 'ratings.votes': vote } };
         let valueToAddToTotal = 0;
         if (oldVote?.vote === rating) {
             return;
@@ -200,11 +203,15 @@ export const rateResponse = async (
         }
         if (oldVote) {
             valueToAddToTotal *= 2;
-            updateQuery = { $set: { [`ratings.votes.${oldVoteIndex}`]: vote } };
+            ratingPromise = oldVote.updateOne({ vote: rating }).exec();
+        } else {
+            const newRating = createRating(rating, response, user);
+            ratingPromise = newRating.save();
         }
         currentRating += valueToAddToTotal;
     }
-    await response.updateOne({ ...updateQuery, 'ratings.total': currentRating }).exec();
+    const totalRatingUpdate = response.updateOne({ rating: currentRating }).exec();
+    await Promise.all([currentRating, totalRatingUpdate]);
 };
 
 export const acceptAnswer = async (question: IQuestionDocumnet, answer: IResponseDocumnet) => {

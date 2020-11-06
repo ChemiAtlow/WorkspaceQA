@@ -18,23 +18,9 @@ const responseSchema = new Schema<IResponseDocumnet>({
             required: false,
         },
     ],
-    ratings: {
-        total: {
-            type: Number,
-            default: 0,
-        },
-        votes: [
-            {
-                user: {
-                    type: Schema.Types.ObjectId,
-                    ref: 'Users',
-                },
-                vote: {
-                    type: String,
-                    enum: ['up', 'down'],
-                },
-            },
-        ],
+    rating: {
+        type: Number,
+        default: 0,
     },
     user: {
         _id: {
